@@ -1,0 +1,90 @@
+# .gitignore for the ALA-to-CRABS pipeline (single file for the whole repository).
+#
+# Tracked: code (Scripts/), configuration, manual inputs (Scripts/data/manual/),
+# READMEs, LICENSE, .Rprofile, .here, renv.lock + renv/activate.R + renv/settings.json,
+# ALA download metadata (citation.csv, doi.txt, headings.csv, README.html,
+# search_settings_ala.txt) and the small final outputs listed at the end.
+# Not tracked: anything large (ALA data, databases, intermediates, caches),
+# credentials and local tool files. The ALA data are cited by DOI in README.md.
+
+# ---- R, renv and IDEs -------------------------------------------------------
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+renv/library/
+renv/staging/
+renv/local/
+renv/cellar/
+renv/python/
+renv/sandbox/
+.posit/
+.vscode/
+
+# ---- targets store ------------------------------------------------------------
+_targets/
+_targets.yaml
+_targets.Rmd
+
+# ---- Credentials --------------------------------------------------------------
+# Scripts/config/secrets.env holds the NCBI e-mail and API key.
+# Scripts/secrets.env.example (the template) stays tracked.
+Scripts/config/secrets.env
+*.env
+
+# ---- ALA occurrence data (several GB) -----------------------------------------
+# Download from the DOIs in README.md. Archives and any extracted occurrence
+# CSVs are never committed; the metadata folders stay tracked.
+*.zip
+ALA_Records/*/*.csv
+
+# ---- Databases (any location) -------------------------------------------------
+# Includes Scripts/data/derived/ala_raw.sqlite and the old
+# ALA_Records/ALA_terrestrial_inventory.sqlite.
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+
+# ---- Name authority exports (APC/AFD, ~100 MB) --------------------------------
+# Downloaded by hand from biodiversity.org.au; see ALA_Records/README.md.
+ALA_Records/APC-taxon-*.csv
+ALA_Records/AFD-*.csv
+
+# ---- Pipeline intermediates and caches ----------------------------------------
+# target_occurrences.csv (~5 GB), synonym and NCBI results, entrez_cache/,
+# ala_genus_cache/, ncbi_taxdump/.
+Scripts/data/derived/
+
+# ---- Manual-review backups ----------------------------------------------------
+# Scripts/data/manual/taxonomy_decisions.csv and fern_lycophyte_genera.txt ARE tracked.
+Scripts/data/manual/review_queue_backups/
+Scripts/data/manual/review_queue_MR_edits_*.csv
+Scripts/_backup_*/
+
+# ---- Outputs: only the small final files are tracked --------------------------
+# Everything else in Scripts/output/ (reports/, run logs, review sheets,
+# old list versions such as crabs_species_list_v1.0.2.txt) is ignored.
+Scripts/output/*
+!Scripts/output/crabs/
+Scripts/output/crabs/*
+!Scripts/output/crabs/crabs_species_list.txt
+!Scripts/output/audit/
+Scripts/output/audit/*
+!Scripts/output/audit/exclusions.csv
+!Scripts/output/audit/qc_summary.csv
+!Scripts/output/audit/region_flagged_species.csv
+!Scripts/output/audit/genus_expansion_species.csv
+!Scripts/output/audit/ncbi_unmatched.csv
+docs/
+
+# ---- Temporary, backup, Office and operating-system files ---------------------
+*.tmp
+*.bak
+*.pre-polish
+*.pre-polish-*
+~$*
+.~lock.*
+.DS_Store
+Thumbs.db
+desktop.ini

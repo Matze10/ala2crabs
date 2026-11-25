@@ -1,0 +1,15 @@
+Exclusion filters included in the retrieval of records from Atlas of Living Australia (ALA)
+
+- Lifeform: Plants
+- State/Territory: QLD and NSW
+- Exclude partially suspect records: y (-1236)
+- Exclude records based on scientific name quality: y (-52848)
+- Exclude records with additional spatial quality issues: y (-1155)
+- Exclude duplicate records; y (-203776)
+- Exclude records based on location uncertainty: y (-245879)
+- Exclude records with an unresolved user annotations: y (-647)
+- Exclude records that are environmental outliers (-5609)
+- Exclude records based on record type: y (
+- Exclude absence records; y 
+- Exclude records pre 1700: y
+- Exclude unverified records: y 
