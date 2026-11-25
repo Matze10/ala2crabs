@@ -1,0 +1,109 @@
+---
+title: "ALA NSW/QLD filtering summary"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(data.table)
+library(DBI)
+library(RSQLite)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+config <- yaml::read_yaml("../config/ala_crabs.yml")
+database <- "../data/derived/ala_raw.sqlite"
+```
+
+# Purpose
+
+This report traces the number of records and candidate names from the combined NSW/QLD ALA download through the rank filter, candidate generation, manual review, Entrez checks, and CRABS export.
+
+# Raw database
+
+```{r raw}
+con <- dbConnect(SQLite(), database)
+raw <- dbGetQuery(con, "SELECT COUNT(*) AS records FROM ala_occurrences_raw")
+raw_ranks <- dbGetQuery(con, "SELECT taxonRank, COUNT(*) AS records FROM ala_occurrences_raw GROUP BY taxonRank ORDER BY records DESC")
+raw_phyla <- dbGetQuery(con, "SELECT phylum, COUNT(*) AS records FROM ala_occurrences_raw GROUP BY phylum ORDER BY records DESC")
+DBI::dbDisconnect(con)
+raw
+raw_ranks
+head(raw_phyla, 20)
+```
+
+# Candidate filtering
+
+```{r stages}
+count_rows <- function(path, chunk = 64 * 1024^2) {
+  con <- file(path, "rb"); on.exit(close(con)); n <- 0
+  repeat { b <- readBin(con, "raw", chunk); if (!length(b)) break; n <- n + sum(b == as.raw(10L)) }
+  n - 1  # minus header
+}
+target_rows <- count_rows("../data/derived/target_occurrences.csv")
+candidates <- fread("../data/derived/name_candidates.csv")
+normalised <- fread("../data/derived/name_candidates_normalised.csv")
+review <- fread("../data/derived/taxonomy_review_queue.csv")
+
+data.table(
+  stage = c("Raw records", "Target records", "Candidate observations", "Normalised names", "Review queue names"),
+  count = c(
+    raw$records,
+    target_rows,
+    nrow(candidates),
+    uniqueN(normalised$normalised_name),
+    nrow(review)
+  )
+)
+```
+
+# Taxonomic exclusions
+
+The target filter retains species and infraspecific ranks and conservatively excludes clearly non-pollen phyla/classes configured in `Scripts/config/ala_crabs.yml`. ALA phylum/class fields are not trusted alone because this export contains inconsistent hierarchy assignments.
+
+# Manual decisions
+
+```{r decisions}
+matches <- fread("../data/derived/taxonomy_matches.csv", na.strings=c("", "NA"))
+matches[, .N, by=decision][order(decision)]
+```
+
+# Region flags
+
+Each region in `geography.region_flags` is a latitude/longitude box. A species is flagged for a region when all its georeferenced records lie inside the box (e.g. `fnq_only`: every record north of Cairns). Flagged species stay in the CRABS list unless the region has `exclude: true`; a hit on one should be checked before it is trusted.
+
+```{r regions}
+flags_file <- "../data/derived/species_latitude_flags.csv"
+region_file <- "../output/audit/region_flagged_species.csv"
+if (file.exists(flags_file)) {
+  flags <- fread(flags_file)
+  regions <- sub("^n_inside_", "", grep("^n_inside_", names(flags), value = TRUE))
+  in_list <- if (file.exists(region_file)) fread(region_file)[, .(species_binomial, in_crabs_list)] else NULL
+  data.table(
+    region = regions,
+    flagged_species = vapply(regions, function(r) sum(flags[[r]] %in% TRUE), integer(1)),
+    in_crabs_list = vapply(regions, function(r) {
+      if (is.null(in_list)) return(NA_integer_)
+      sp <- flags[get(r) %in% TRUE, species_binomial]
+      sum(in_list[species_binomial %chin% sp, in_crabs_list] %in% TRUE)
+    }, integer(1))
+  )
+}
+```
+
+# Entrez and CRABS output
+
+```{r final}
+entrez_file <- "../data/derived/entrez_marker_checks.csv"
+entrez <- fread(entrez_file)
+if ("ncbi_its_hits" %in% names(entrez)) setnames(entrez, "ncbi_its_hits", "ncbi_marker_hits")
+crabs <- readLines("../output/crabs/crabs_species_list.txt", warn = FALSE)
+exclusions <- fread("../output/audit/exclusions.csv")
+
+list(
+  reviewed_species_checked = nrow(entrez),
+  final_crabs_names = length(crabs),
+  excluded_rows = nrow(exclusions),
+  marker = if (nrow(entrez) && "marker" %in% names(entrez)) unique(entrez$marker) else "ITS",
+  species_with_marker_sequences = if (nrow(entrez) == 0) 0 else sum(entrez$ncbi_marker_hits > 0, na.rm = TRUE)
+)
+
+head(crabs, 100)
+```
