@@ -37,7 +37,8 @@ validate_manual_decisions <- function(review_file, decision_file, output_file, l
       paste0(inc$accepted_name[bad_rank], " (", inc$accepted_rank[bad_rank], " -> ", rank_from_name[bad_rank], ")", collapse = "; "))
     no_species <- parsed$canonical_rank == "genus_or_uncertain"
     if (any(no_species)) message(sum(no_species), " included names are genus-level (",
-      length(unique(inc$accepted_name[no_species])), " genera) and will not reach the CRABS species list.")
+      length(unique(inc$accepted_name[no_species])), " genera). They are not written to the CRABS list as genera;",
+      " the genus_expansion step adds their species instead (see output.genus_expansion_audit).")
   }
   # Review sheet: EVERY review candidate (names build_review_queue() did not
   # include automatically) plus any other name with a manual decision. Existing

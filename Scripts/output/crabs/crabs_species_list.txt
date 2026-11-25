@@ -565,6 +565,7 @@ Acacia storyi
 Acacia stowardii
 Acacia striatifolia
 Acacia stricta
+Acacia strongylophylla
 Acacia suaveolens
 Acacia subcaerulea
 Acacia subflexuosa
@@ -2477,6 +2478,7 @@ Brachychiton muellerianus
 Brachychiton paradoxus
 Brachychiton populneus
 Brachychiton rupestris
+Brachychiton sp. Ormeau
 Brachychiton turgidulus
 Brachychiton velutinosus
 Brachychiton vinicolor
@@ -2872,6 +2874,7 @@ Caladenia testacea
 Caladenia toxochila
 Caladenia transitoria
 Caladenia ustulata
+Caladenia venusta
 Caladenia verrucosa
 Caladenia whiteheadii
 Caladenia xanthochila
@@ -5915,6 +5918,7 @@ Elaeocarpus reticulatus
 Elaeocarpus ruminatus
 Elaeocarpus sedentarius
 Elaeocarpus sericopetalus
+Elaeocarpus sp. Brass 18336
 Elaeocarpus stellaris
 Elaeocarpus thelmae
 Elaeocarpus williamsianus
@@ -7697,6 +7701,7 @@ Geococcus pusillus
 Geodorum densifolium
 Geophila repens
 Geosiris australiensis
+Geranium aequale
 Geranium antrorsum
 Geranium brevicaule
 Geranium dissectum
@@ -8820,6 +8825,7 @@ Hibbertia malacophylla
 Hibbertia marginata
 Hibbertia mediterranea
 Hibbertia melhanioides
+Hibbertia millari
 Hibbertia miniata
 Hibbertia minima
 Hibbertia minysantha
@@ -9294,6 +9300,7 @@ Ipomoea nil
 Ipomoea obscura
 Ipomoea ochracea
 Ipomoea pes-caprae
+Ipomoea pes-tigridis
 Ipomoea plebeia
 Ipomoea polpha
 Ipomoea polymorpha
@@ -11299,7 +11306,9 @@ Muehlenbeckia complexa
 Muehlenbeckia diclina
 Muehlenbeckia gracillima
 Muehlenbeckia rhyticarya
+Muehlenbeckia sp. Mt Brockman (L.A.Craven 2357) K.L.Wilson & Makinson
 Muehlenbeckia triloba
+Muehlenbeckia tuggeranong
 Muehlenbeckia varians
 Muehlenbeckia zippelii
 Muelleranthus parvalatus
@@ -11769,6 +11778,7 @@ Olearia ramosissima
 Olearia ramulosa
 Olearia rosmarinifolia
 Olearia rugosa
+Olearia sp. Rhizomatica (I.R.Telford 11549)
 Olearia stellulata
 Olearia stenophylla
 Olearia stilwelliae
@@ -12275,6 +12285,7 @@ Pelargonium panduriforme
 Pelargonium peltatum
 Pelargonium quercifolium
 Pelargonium rodneyanum
+Pelargonium sp. Striatellum (G.W.Carr 10345)
 Pelargonium x asperum
 Pelargonium x hortorum
 Peltophorum pterocarpum
@@ -13018,6 +13029,7 @@ Podolepis jacaeoides
 Podolepis jaceoides
 Podolepis laciniata
 Podolepis lessonii
+Podolepis linearifolia
 Podolepis longipedata
 Podolepis monticola
 Podolepis muelleri
@@ -13310,6 +13322,7 @@ Prasophyllum cyphochilum
 Prasophyllum dossenum
 Prasophyllum elatum
 Prasophyllum exile
+Prasophyllum fitzgeraldii
 Prasophyllum flavum
 Prasophyllum frenchii
 Prasophyllum fuscum
@@ -13444,6 +13457,7 @@ Prostanthera saxicola
 Prostanthera scutellarioides
 Prostanthera sejuncta
 Prostanthera serpyllifolia
+Prostanthera sp. Minyon Falls (J.B.Williams NE61356)
 Prostanthera spathulata
 Prostanthera spinosa
 Prostanthera staurophylla
@@ -13743,6 +13757,7 @@ Pterostylis uliginosa
 Pterostylis umbrina
 Pterostylis venusta
 Pterostylis vernalis
+Pterostylis vescula
 Pterostylis vitrea
 Pterostylis woollsii
 Pterostylis ziegeleri
@@ -13838,6 +13853,7 @@ Pultenaea flexilis
 Pultenaea foliolosa
 Pultenaea furcata
 Pultenaea glabra
+Pultenaea gunnii
 Pultenaea hartmanii
 Pultenaea hartmannii
 Pultenaea hispidula
@@ -14460,6 +14476,7 @@ Salvia verbenacea
 Samadera amara
 Samadera baileyana
 Samadera bidwillii
+Samadera sp. Mt Nardi
 Samanea saman
 Sambucus australasica
 Sambucus canadensis
@@ -14651,6 +14668,7 @@ Schoenus sparteus
 Schoenus subaphyllus
 Schoenus subfascicularis
 Schoenus tesquorum
+Schoenus thedae
 Schoenus turbinatus
 Schoenus vaginatus
 Schoenus villosus
@@ -15073,6 +15091,8 @@ Sida pleiantha
 Sida pusilla
 Sida rhombifolia
 Sida rohlenae
+Sida sp. 'Excedentifolia (J.L.Egan 1925) WA Herbarium'
+Sida sp. dark green fruits
 Sida spenceriana
 Sida spinosa
 Sida spodochroma
@@ -15201,6 +15221,7 @@ Solanum esuirale
 Solanum esuriale
 Solanum fecundum
 Solanum ferocissimum
+Solanum ferox
 Solanum fervens
 Solanum francisii
 Solanum furfuraceum
@@ -15210,6 +15231,7 @@ Solanum gympiense
 Solanum hamulosum
 Solanum hapalum
 Solanum hispidum
+Solanum hystrix
 Solanum inaequilaterale
 Solanum inaequilaterum
 Solanum incanum
@@ -15261,6 +15283,7 @@ Solanum pisinnum
 Solanum prinophyllum
 Solanum prolatum
 Solanum pseudocapsicum
+Solanum pseudolulo
 Solanum pugiunculiferum
 Solanum pungetium
 Solanum pusillum
@@ -15270,6 +15293,7 @@ Solanum radicans
 Solanum retroflexum
 Solanum rixosum
 Solanum rostratum
+Solanum sanitwongsei
 Solanum sarrachoides
 Solanum seaforthianum
 Solanum semiarmatum
@@ -15541,6 +15565,7 @@ Stemodia floribunda
 Stemodia florulenta
 Stemodia glabella
 Stemodia glabra
+Stemodia grossa
 Stemodia lathraia
 Stemodia lythrifolia
 Stemodia pubescens
@@ -16039,6 +16064,8 @@ Taraxacum aristum
 Taraxacum bracteatum
 Taraxacum chelelobatum
 Taraxacum cygnorum
+Taraxacum gasparini
+Taraxacum gracilens
 Taraxacum khatoonae
 Taraxacum officinale
 Taraxacum ohritense
@@ -16135,6 +16162,7 @@ Tephrosia gaudium-solis
 Tephrosia glomeraliflora
 Tephrosia glomeruliflora
 Tephrosia grandiflora
+Tephrosia gyropoda
 Tephrosia inadensis
 Tephrosia inandensis
 Tephrosia insolens
@@ -16969,6 +16997,7 @@ Viola odorata
 Viola pedata
 Viola perreniformis
 Viola riviniana
+Viola sp. nov. A
 Viola spathulata
 Viola tricolor
 Viola x wittrockiana
@@ -17221,6 +17250,7 @@ Xerochrysum macsweeneyorum
 Xerochrysum murapan
 Xerochrysum neoanglicum
 Xerochrysum palustre
+Xerochrysum sp. Glencoe
 Xerochrysum strictum
 Xerochrysum subundulatum
 Xerochrysum viscosum

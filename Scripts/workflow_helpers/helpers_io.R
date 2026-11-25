@@ -153,3 +153,95 @@ render_report <- function(input, output_dir) {
   old <- setwd(dirname(input)); on.exit(setwd(old), add = TRUE)
   knitr::knit(basename(input), output = out, quiet = TRUE, envir = new.env(parent = globalenv()))
 }
+
+# QC summary (target qc_file): one row per metric with a section and a short
+# description, from the files the pipeline has already written. Counts are
+# names or species, not records, unless the metric says records.
+count_file_rows <- function(path, chunk = 64 * 1024^2) {
+  if (is.null(path) || !length(path) || !file.exists(path)) return(NA_real_)
+  con <- file(path, "rb"); on.exit(close(con)); n <- 0
+  repeat { b <- readBin(con, "raw", chunk); if (!length(b)) break; n <- n + sum(b == as.raw(10L)) }
+  max(n - 1, 0)  # minus header
+}
+
+build_qc_summary <- function(raw_qc, target_records, candidates, normalised_names, taxonomy_matches,
+                             synonym_file, genus_expansion_file, entrez_checks, config, output_path) {
+  rd <- function(p) if (!is.null(p) && length(p) && file.exists(p)) data.table::fread(p, na.strings = c("", "NA"), encoding = "UTF-8") else data.table::data.table()
+  out_path <- function(key) here::here(config$output[[key]])
+  col <- function(dt, name) if (name %in% names(dt)) dt[[name]] else rep(NA, nrow(dt))
+  rows <- list()
+  add <- function(section, metric, value, description) {
+    rows[[length(rows) + 1L]] <<- data.table::data.table(section = section, metric = metric,
+                                                         value = as.numeric(value), description = description)
+  }
+  raw_n <- raw_qc$value[raw_qc$metric == "raw_records"]
+  add("records", "raw_records", raw_n, "ALA records imported from the ZIP")
+  add("records", "target_records", count_file_rows(target_records), "records left after the taxon, rank and genus filters")
+  add("records", "target_columns", raw_qc$value[raw_qc$metric == "target_columns"], "columns kept in the target records")
+
+  norm <- rd(normalised_names)
+  add("names", "candidate_names", count_file_rows(candidates), "distinct name strings taken from the ALA name fields")
+  add("names", "normalised_names", data.table::uniqueN(col(norm, "normalised_name")), "distinct names after cleaning")
+  m <- rd(taxonomy_matches)
+  dec <- col(m, "decision"); inc_values <- include_decision_values(config)
+  included <- !is.na(dec) & dec %chin% inc_values
+  add("names", "canonical_names", nrow(m), "canonical names (authors removed, rank markers standardised)")
+  add("names", "canonical_species", data.table::uniqueN(col(m, "canonical_binomial")[included & !is.na(col(m, "canonical_binomial"))]),
+      "distinct binomials among the included names")
+
+  src <- col(m, "decision_source")
+  add("decisions", "included_automatic", sum(included & src %chin% "automatic"), "clean names included without review")
+  add("decisions", "decided_manually", sum(src %chin% "manual"), "names with a decision in taxonomy_decisions.csv")
+  add("decisions", "included_total", sum(included), "names with an include decision")
+  add("decisions", "excluded", sum(!is.na(dec) & !included), "names with exclude or insufficient_evidence (exclusions.csv)")
+  add("decisions", "undecided", count_file_rows(out_path("crabs_review_queue")), "names still without a decision (crabs_review_queue.csv)")
+  add("decisions", "genus_level_included", sum(included & col(m, "canonical_rank") %chin% "genus_or_uncertain"),
+      "included names at genus level (not written as genera; see genus expansion)")
+
+  st <- col(m, "authority_status")
+  add("authority", "authority_accepted", sum(grepl("^accepted", st)), paste0("names accepted in ", authority_name(config)))
+  add("authority", "authority_synonym", sum(grepl("synonym|misapplied", st)), "names that are synonyms or misapplications, replaced by the accepted name")
+  add("authority", "not_in_authority", sum(st %chin% "not_in_authority"), "names not found in the authority (ALA name used)")
+  add("authority", "ncbi_matched", sum(!is.na(col(m, "ncbi_taxid"))), "names matched to an NCBI Taxonomy ID")
+  add("authority", "ncbi_unmatched", count_file_rows(out_path("ncbi_unmatched")), "names without an NCBI match (ncbi_unmatched.csv)")
+
+  ge <- rd(genus_expansion_file)
+  gsrc <- col(ge, "source")
+  add("genus_expansion", "authority_species_added", sum(gsrc %chin% "authority_genus_expansion"), "authority species of included genus-level names")
+  add("genus_expansion", "ncbi_phrase_names_added", sum(gsrc %chin% "ncbi_phrase_name"), "phrase names that NCBI lists as taxa")
+
+  e <- rd(entrez_checks)
+  hits <- suppressWarnings(as.numeric(col(e, "ncbi_marker_hits")))
+  marker <- if (!is.null(config$marker$name)) config$marker$name else "marker"
+  add("ncbi_marker", "species_checked", nrow(e), "names sent to the NCBI nucleotide check")
+  add("ncbi_marker", "with_marker_sequences", sum(!is.na(hits) & hits > 0), paste0("names with at least one ", marker, " sequence"))
+  add("ncbi_marker", "without_marker_sequences", sum(!is.na(hits) & hits == 0), paste0("names with no ", marker, " sequence"))
+  add("ncbi_marker", "failed_lookups", sum(!col(e, "entrez_status") %chin% "queried"), "lookups that failed (retried on the next run)")
+
+  crabs_file <- out_path("crabs_species_list")
+  lines <- if (file.exists(crabs_file)) trimws(readLines(crabs_file, warn = FALSE, encoding = "UTF-8")) else character()
+  lines <- lines[nzchar(lines)]
+  hybrid <- grepl("^[^ ]+ [x×] |^[x×] ", lines)
+  phrase <- !hybrid & grepl(" sp\\. ", lines)
+  add("crabs_list", "species_lines", length(lines), "lines in crabs_species_list.txt")
+  add("crabs_list", "binomials", sum(!hybrid & !phrase), "plain binomials")
+  add("crabs_list", "named_hybrids", sum(hybrid), "hybrids NCBI lists as species (crabs.keep_ncbi_hybrids)")
+  add("crabs_list", "phrase_names", sum(phrase), "phrase names NCBI lists as taxa (crabs.keep_ncbi_phrase_names)")
+  add("crabs_list", "with_marker_sequences", sum(lines %chin% col(e, "species_name")[!is.na(hits) & hits > 0]),
+      paste0("list lines with at least one ", marker, " sequence"))
+
+  rf <- rd(out_path("region_flagged_species"))
+  regions <- sub("^n_inside_", "", grep("^n_inside_", names(rf), value = TRUE))
+  for (r in regions) {
+    flagged <- if (r %in% names(rf)) as.logical(rf[[r]]) else rep(FALSE, nrow(rf))
+    flagged[is.na(flagged)] <- FALSE
+    in_list <- as.logical(col(rf, "in_crabs_list")); in_list[is.na(in_list)] <- FALSE
+    add("regions", paste0(r, "_flagged"), sum(flagged), paste0("species with all georeferenced records in region ", r))
+    add("regions", paste0(r, "_in_list"), sum(flagged & in_list), paste0("of these, species in the CRABS list"))
+  }
+
+  qc <- data.table::rbindlist(rows)
+  dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
+  data.table::fwrite(qc, output_path)
+  output_path
+}

@@ -1,0 +1,32 @@
+section,metric,value,description
+records,raw_records,12119773,ALA records imported from the ZIP
+records,target_records,11495771,"records left after the taxon, rank and genus filters"
+records,target_columns,41,columns kept in the target records
+names,candidate_names,58877,distinct name strings taken from the ALA name fields
+names,normalised_names,57337,distinct names after cleaning
+names,canonical_names,57337,"canonical names (authors removed, rank markers standardised)"
+names,canonical_species,22987,distinct binomials among the included names
+decisions,included_automatic,57067,clean names included without review
+decisions,decided_manually,270,names with a decision in taxonomy_decisions.csv
+decisions,included_total,57311,names with an include decision
+decisions,excluded,26,names with exclude or insufficient_evidence (exclusions.csv)
+decisions,undecided,0,names still without a decision (crabs_review_queue.csv)
+decisions,genus_level_included,185,included names at genus level (not written as genera; see genus expansion)
+authority,authority_accepted,41658,names accepted in APC
+authority,authority_synonym,10847,"names that are synonyms or misapplications, replaced by the accepted name"
+authority,not_in_authority,4455,names not found in the authority (ALA name used)
+authority,ncbi_matched,50210,names matched to an NCBI Taxonomy ID
+authority,ncbi_unmatched,3949,names without an NCBI match (ncbi_unmatched.csv)
+genus_expansion,authority_species_added,19,authority species of included genus-level names
+genus_expansion,ncbi_phrase_names_added,8,phrase names that NCBI lists as taxa
+ncbi_marker,species_checked,19273,names sent to the NCBI nucleotide check
+ncbi_marker,with_marker_sequences,8987,names with at least one ITS sequence
+ncbi_marker,without_marker_sequences,10286,names with no ITS sequence
+ncbi_marker,failed_lookups,0,lookups that failed (retried on the next run)
+crabs_list,species_lines,17423,lines in crabs_species_list.txt
+crabs_list,binomials,17376,plain binomials
+crabs_list,named_hybrids,36,hybrids NCBI lists as species (crabs.keep_ncbi_hybrids)
+crabs_list,phrase_names,11,phrase names NCBI lists as taxa (crabs.keep_ncbi_phrase_names)
+crabs_list,with_marker_sequences,8671,list lines with at least one ITS sequence
+regions,fnq_only_flagged,1199,species with all georeferenced records in region fnq_only
+regions,fnq_only_in_list,765,"of these, species in the CRABS list"

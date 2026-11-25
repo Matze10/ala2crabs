@@ -237,21 +237,16 @@ list(
     },
     format = "file"
   ),
-  # QC summary: raw/target record counts plus candidate and output counts.
+  # QC summary (Scripts/output/audit/qc_summary.csv): record, name, decision,
+  # authority, NCBI, genus-expansion, CRABS-list and region counts, one row per
+  # metric with a short description (build_qc_summary() in helpers_io.R).
   tar_target(
     qc_file,
     {
-      path <- here::here(config$output$qc)
-      dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-      qc <- data.table::rbindlist(list(
-        raw_qc,
-        data.table::data.table(
-          metric = c("candidate_rows", "normalised_rows", "crabs_output_files"),
-          value = c(nrow(data.table::fread(candidates)), nrow(data.table::fread(normalised_names)), length(crabs_outputs))
-        )
-      ), fill = TRUE)
-      data.table::fwrite(qc, path)
-      path
+      crabs_outputs
+      build_qc_summary(raw_qc, target_records, candidates, normalised_names, taxonomy_matches,
+                       synonym_matches[1], genus_expansion[1], entrez_checks, config,
+                       here::here(config$output$qc))
     },
     format = "file"
   )

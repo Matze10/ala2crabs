@@ -1,10 +1,10 @@
 ---
-version: 1.0.3
+version: 1.0.4
 modified: 2026-11-25
 ---
 # ALA to CRABS: species lists for reference databases from Atlas of Living Australia records
 
-Version 1.0.3 (2026-11-25). See [Version history](#version-history).
+Version 1.0.4 (2026-11-25). See [Version history](#version-history).
 
 This pipeline turns an Atlas of Living Australia (ALA) occurrence download into a reviewed species list for a CRABS (Creating Reference databases for Amplicon-Based Sequencing) reference database. It filters the records to the taxon you configure, cleans and canonicalises the names, resolves synonyms against a national name authority and NCBI Taxonomy, sends only doubtful names to manual review, counts the NCBI sequences of your barcode marker for every species, and writes one species per line in the spelling CRABS needs. Taxon, marker, filters and region flags are all set in one YAML file.
 
@@ -23,7 +23,7 @@ All commands are run from the project root, the folder that contains this README
 2. Put your ALA download into `ALA_Records/`: one ZIP with the occurrence CSVs, e.g. `ALA_Records/plant_ala_records-2026-11-21/records-2026-11-21.zip`. Set `input.combined_zip` to its path and list the CSV names in `input.expected_members` in [`Scripts/config/ala_crabs.yml`](Scripts/config/ala_crabs.yml). To reproduce the example, download the two datasets from their DOIs ([Example 1](#example-1-pollen-its-list-for-nsw-and-qld-seed-plants)). The data are not in this repository.
 3. Download the name authority file by hand (APC for plants, AFD for fauna) and set `taxonomy.authority_file`; see [Name authority file](#name-authority-file-apc-or-afd-manual-download-required). For a group without an Australian authority, set `taxonomy.authority: none`.
 4. Check the `marker:` and `taxon:` blocks in the config ([Configuration](#configuration)).
-5. Copy `Scripts/secrets.env.example` to `Scripts/config/secrets.env` and fill in `NCBI_EMAIL` and `NCBI_API_KEY`.
+5. Copy `Scripts/config/secrets.env.example` to `Scripts/config/secrets.env` and fill in `NCBI_EMAIL` and `NCBI_API_KEY`.
 6. Run the pipeline. In R:
 
    ```r
@@ -261,7 +261,7 @@ Genus-level decisions (e.g. "Acacia sp. New England (J.B.Williams 97011)" decide
 1. **NCBI phrase names** (`keep_ncbi_phrase_names`). The phrase name is looked up in the NCBI Taxonomy dump below `taxon.ncbi_root_taxid`, first as written and then without the voucher in brackets and a trailing "<state> Herbarium". If NCBI lists it (e.g. *Samadera* sp. Mt Nardi, *Olearia* sp. Rhizomatica (I.R.Telford 11549)), the exact NCBI scientific name goes into the list. Included names that the synonym step matched to an NCBI phrase name are written the same way. These are the only lines of the list that are not "Genus epithet", apart from named hybrids.
 2. **Authority species** (`expand_genus_from_authority`). The name authority's accepted species of the genus whose distribution lists one of `taxonomy.authority_states` (without an excluded qualifier) are added if they are not in the list yet. They are mapped to NCBI like the synonym step: accepted name, authority synonyms, Latin ending variants. This works the same for plants (APC) and fauna (AFD). The AFD checklist export has no distribution column, so for AFD the state filter cannot be applied: with `crabs.expand_genus_without_distribution: true` every accepted AFD species of the genus is added (the AFD covers Australian fauna, so this is Australia-wide, not NSW/Qld only); with `false` (default) the expansion is skipped with a message. With `authority: none` it is always skipped. If an AFD file has a `DISTRIBUTION` or `STATES` column, the state filter is used as for APC.
 
-Expanded species have no ALA records of their own, so they get no region flags; they still pass the hybrid and `require_marker_hit` filters and get NCBI marker counts. Everything added is listed in `Scripts/output/audit/genus_expansion_species.csv` (`source` = `ncbi_phrase_name` or `authority_genus_expansion`, the genus, the genus-level names it came from, authority name, ID and distribution, CRABS name, NCBI taxid and `ncbi_match_via`). In the example, about 19 authority species and 8 NCBI phrase names are added.
+Expanded species have no ALA records of their own, so they get no region flags; they still pass the hybrid and `require_marker_hit` filters and get NCBI marker counts. Everything added is listed in `Scripts/output/audit/genus_expansion_species.csv` (`source` = `ncbi_phrase_name` or `authority_genus_expansion`, the genus, the genus-level names it came from, authority name, ID and distribution, CRABS name, NCBI taxid and `ncbi_match_via`). In the example, 19 authority species and 8 NCBI phrase names are added.
 
 **`require_marker_hit`: `false` is recommended.** CRABS downloads sequences per name anyway: a species without a sequence contributes nothing, but keeping it makes the list a complete inventory of the target flora or fauna, and the count can still be used to filter later. Use `true` only if the list itself should show what the reference database can contain. In the example about half of the checked names (8,975 of 19,243) had an ITS sequence.
 
@@ -362,22 +362,53 @@ Blank template rows are ignored, and `ok` is read as `include`. Decision matchin
 
 ## Outputs
 
+A run writes many files, but you only need a few. Everything else is either an audit file you can open when you want to know why a name was kept or dropped, or an intermediate file the pipeline keeps so that a rerun can skip finished steps.
+
+### 1. The result
+
 | File | What it is |
 |---|---|
-| `Scripts/output/crabs/crabs_species_list.txt` | The CRABS input: one species per line (NCBI spelling). |
-| `Scripts/data/derived/synonym_matches.csv` | Per canonical name: authority status, accepted name, NCBI taxid and name, match route (`ncbi_match_via`), CRABS name. |
-| `Scripts/output/audit/ncbi_unmatched.csv` | Names with no NCBI Taxonomy match. |
-| `Scripts/data/derived/entrez_marker_checks.csv` | Per species: NCBI taxonomy IDs and number of marker sequences (`ncbi_marker_hits`). |
-| `Scripts/output/audit/review_queue.csv` | Review sheet for doubtful names (rewritten every run). |
-| `Scripts/output/audit/exclusions.csv` | Names with decision `exclude` or `insufficient_evidence`. |
-| `Scripts/output/audit/crabs_review_queue.csv` | Names still without a decision, with their NCBI results. |
-| `Scripts/output/audit/region_flagged_species.csv` | Species flagged by any area, with counts and whether each is in the CRABS list. |
-| `Scripts/output/audit/genus_expansion_species.csv` | Species added by the genus expansion and NCBI phrase names, with their source genus-level names. |
-| `Scripts/output/audit/ala_genus_checks.csv` | ALA name-matching result per genus and why a genus was excluded. |
-| `Scripts/output/audit/qc_summary.csv` | Record and name counts. |
-| `Scripts/output/reports/05_filtering_summary.html` | Report of counts through the filters, the decisions and the region flags (`.md` if pandoc is not found). |
+| `Scripts/output/crabs/crabs_species_list.txt` | **The CRABS input**: one species per line (NCBI spelling). This is the file you give to CRABS. |
+| `Scripts/output/reports/05_filtering_summary.html` | Report of the counts through the filters, the decisions and the region flags (`.md` if pandoc is not found). |
 
-Files in `Scripts/data/derived/` and the report are not tracked in Git; they are rebuilt by the pipeline.
+### 2. The file you edit
+
+| File | What it is |
+|---|---|
+| `Scripts/output/audit/review_queue.csv` | Review sheet for doubtful names (rewritten every run, not tracked). Fill in the decision columns and copy them into `Scripts/data/manual/taxonomy_decisions.csv` ([Manual review](#manual-review)), which is tracked. |
+
+### 3. Audit files (optional)
+
+Open these to check or explain the list; nothing else needs them. The ones marked "yes" are tracked in Git, so the published repository shows what the example run kept and dropped.
+
+| File | What it is | In Git |
+|---|---|---|
+| `Scripts/output/audit/qc_summary.csv` | The numbers of the run in one table (`section`, `metric`, `value`, `description`): records, names, decisions, authority and NCBI matches, genus expansion, NCBI marker check, CRABS list (binomials, hybrids, phrase names, lines with marker sequences) and region flags. | yes |
+| `Scripts/output/audit/exclusions.csv` | Names with decision `exclude` or `insufficient_evidence`. | yes |
+| `Scripts/output/audit/ncbi_unmatched.csv` | Names with no NCBI Taxonomy match (they cannot reach CRABS). | yes |
+| `Scripts/output/audit/region_flagged_species.csv` | Species flagged by any area, with counts and whether each is in the CRABS list. | yes |
+| `Scripts/output/audit/genus_expansion_species.csv` | Species added by the genus expansion and NCBI phrase names, with their source genus-level names. | yes |
+| `Scripts/output/audit/crabs_review_queue.csv` | Names still without a decision, with their NCBI results. | no |
+| `Scripts/output/audit/ala_genus_checks.csv` | ALA name-matching result per genus and why a genus was excluded. | no |
+| `Scripts/output/audit/input_manifest.csv` | The input files with size and MD5 checksum. | no |
+
+### 4. Intermediate files (not tracked, rebuilt by the pipeline)
+
+`Scripts/data/derived/` holds the step-by-step files and caches. You do not need to open them, but `targets` uses them to skip steps that have not changed. The two large ones are `ala_raw.sqlite` (~7 GB) and `target_occurrences.csv` (~5 GB); see [Cleaning up disk space](#cleaning-up-disk-space) before deleting anything.
+
+| File or folder | Step |
+|---|---|
+| `ala_raw.sqlite` | All ALA records imported from the ZIP. |
+| `target_occurrences.csv` | Records left after the taxon, rank and region filters. |
+| `species_latitude_flags.csv` | Per-species region flags. |
+| `name_candidates.csv`, `name_candidates_normalised.csv` | Names taken from the records, then cleaned and canonicalised. |
+| `taxonomy_review_queue.csv`, `manual_review_queue.csv` | All names with their automatic proposal; the second holds only the names that need review. |
+| `synonym_matches.csv` | Per canonical name: authority status, accepted name, NCBI taxid and name, match route (`ncbi_match_via`), CRABS name. |
+| `taxonomy_matches.csv` | Names after the manual decisions are applied. |
+| `genus_expansion.csv` | Species added by the genus expansion (copied to the audit file above). |
+| `reviewed_species.txt` | Species sent to the NCBI marker check. |
+| `entrez_marker_checks.csv` | Per species: NCBI taxonomy IDs and number of marker sequences (`ncbi_marker_hits`). |
+| `entrez_cache/`, `ncbi_taxdump/`, `ala_genus_cache/` | Caches of the NCBI and ALA web queries ([NCBI caches](#ncbi-caches)). |
 
 ### Confirm outputs
 
@@ -437,7 +468,7 @@ The caches live in `Scripts/data/derived/`, outside the `targets` store. When `t
 
 ### Cleaning up disk space
 
-Sizes measured for the example after the 1.0.3 runs (November 2026).
+Sizes measured for the example after the 1.0.3 and 1.0.4 runs (November 2026).
 
 | File or folder | Size | What it is for | Safe to delete? | Cost on the next run |
 |---|---|---|---|---|
@@ -475,7 +506,7 @@ The CSVs of both downloads were renamed by hand to the part names above and zipp
 - sp. phrase names, sp. nov., `Genus subsp. x`: the plain genus name (`Acacia`, not `Acacia sp`), rank `genus`, include. Genus-level names are not written to the CRABS list as genera; the [genus expansion](#genus-expansion-and-ncbi-phrase-names) adds the NCBI phrase names and the APC species of those genera instead.
 - a/b names, complexes, intergrades, `A ? B`, unusable labels: exclude, reason `rejected`.
 
-**Results.** Run of 2026-11-25 before the genus expansion: 12,119,773 raw records, 11,495,771 target records, 57,337 normalised names; 17,393 species in the CRABS list, including 36 named hybrids that NCBI lists as species; 3,949 names without an NCBI match; 1,199 species flagged `fnq_only`; 8,975 of the 19,243 checked names with at least one ITS sequence at NCBI. The final v1.0.3 run adds about 19 APC species and 8 NCBI phrase names (count to be updated after that run).
+**Results.** Final 1.0.4 run of 2026-11-25 (clean start, 2 h 24 min with the NCBI results of the stopped first attempt cached; a fully fresh run takes about 6 h): 12,119,773 raw records, 11,495,771 target records, 57,399 normalised names; **17,423 species in the CRABS list**, including 36 named hybrids and 11 phrase names that NCBI lists as taxa; 27 lines added by the genus expansion (19 APC species and 8 NCBI phrase names, see `genus_expansion_species.csv`); 3,949 names without an NCBI match; 1,199 species flagged `fnq_only` (kept); 8,987 of the 19,273 checked names with at least one ITS sequence at NCBI. No target ended with a warning or error. All numbers are in `Scripts/output/audit/qc_summary.csv`.
 
 ## Example 2: COI for Australian fauna
 
@@ -517,8 +548,8 @@ ALA/
 ├── ALA_Records/                       (ALA downloads and the authority CSV; see its README)
 ├── Scripts/
 │   ├── _targets.R                     (pipeline definition)
-│   ├── secrets.env.example            (template for config/secrets.env)
 │   ├── config/ala_crabs.yml           (all settings)
+│   ├── config/secrets.env.example     (template for config/secrets.env)
 │   ├── workflow_helpers/              (helpers_*.R functions)
 │   ├── analysis/05_filtering_summary.Rmd
 │   ├── data/manual/                   (taxonomy_decisions.csv, fern_lycophyte_genera.txt)
@@ -537,6 +568,14 @@ This repository is licensed under CC BY 4.0 (see [`LICENSE`](LICENSE)). When usi
 
 ## Version history
 
+- **1.0.4 (2026-11-25)**: genus expansion, Australian fauna (AFD) support, config cleanup; first published version.
+  - Genus expansion for plants and fauna (`crabs.expand_genus_from_authority`, `crabs.expand_genus_without_distribution`, `taxonomy.authority_states`, `taxonomy.authority_state_qualifiers_excluded`) and NCBI phrase names (`crabs.keep_ncbi_phrase_names`) for included genus-level names; audit `genus_expansion_species.csv`.
+  - `target.candidate_fields` and `crabs.include_decisions` now used by the code; unused keys removed (`taxonomy.primary_source`, `taxonomy.primary_source_version`, `target.retain_ambiguous_names`, `target.retain_infraspecific`).
+  - Seven autonyms in `taxonomy_decisions.csv` (e.g. *Acacia victoriae victoriae*) given rank `species`, matching their name; *Acaena* sp. Thredbo River Gorge decided as *Acaena* (was *Acacia*); `target_pha_count` removed from `qc_summary.csv`.
+  - Removed: the unused analysis pages `01_`–`04_*.Rmd`, `_workflowr.yml`, the old template `Scripts/secrets.env.example` (the template is now `Scripts/config/secrets.env.example`) and the pre-1.0.2 file `entrez_its_checks.csv`.
+  - AFD reader (`read_afd()`) for Australian fauna, tested on an AFD Vespidae checklist; README states the flora/fauna setups.
+  - README: outputs grouped into result, review file, audit files and intermediate files.
+  - `qc_summary.csv` extended from 5 to about 30 metrics with sections and descriptions (`build_qc_summary()`), including species counts for the CRABS list.
 - **1.0.3 (2026-11-25)**: synonym step, configurable taxon and region flags.
   - Names resolved against APC (plants) or AFD (animals; reader tested on a Vespidae checklist) from a manually downloaded CSV (`taxonomy.authority`, `taxonomy.authority_file`), then matched to the NCBI Taxonomy dump below `taxon.ncbi_root_taxid`; the CRABS list uses the NCBI name. New files `synonym_matches.csv` and `ncbi_unmatched.csv`.
   - `authority` / `authority_version` filled from the sources instead of the placeholder.
@@ -544,10 +583,6 @@ This repository is licensed under CC BY 4.0 (see [`LICENSE`](LICENSE)). When usi
   - Named NCBI hybrids kept (`crabs.keep_ncbi_hybrids`).
   - User-set `taxon:` block (`label`, `ala_kingdom`, `ncbi_organism_filter`, `ncbi_root_taxid`, `seed_plant_taxid`) replaces the hard-coded kingdom Plantae and NCBI roots; ALA species groups for the genus check configurable (`target.exclude_species_groups`). Defaults reproduce the plant setup and reuse the NCBI cache.
   - Configurable region flags by latitude/longitude (`geography.region_flags`) replace the fixed FNQ flag, including multi-box areas (`boxes:`); `fnq_only` is the configured area, and `fnq_only_species.csv` became `region_flagged_species.csv`. Deprecated but still read: `geography.fnq_boundary_latitude` (used only if `region_flags` is absent) and `crabs.exclude_fnq_only` (`true` excludes the area `fnq_only`).
-  - Genus expansion for plants and fauna (`crabs.expand_genus_from_authority`, `crabs.expand_genus_without_distribution`, `taxonomy.authority_states`, `taxonomy.authority_state_qualifiers_excluded`) and NCBI phrase names (`crabs.keep_ncbi_phrase_names`) for included genus-level names; audit `genus_expansion_species.csv`.
-  - `target.candidate_fields` and `crabs.include_decisions` now used by the code; unused keys removed (`taxonomy.primary_source`, `taxonomy.primary_source_version`, `target.retain_ambiguous_names`, `target.retain_infraspecific`).
-  - Seven autonyms in `taxonomy_decisions.csv` (e.g. *Acacia victoriae victoriae*) given rank `species`, matching their name; *Acaena* sp. Thredbo River Gorge decided as *Acaena* (was *Acacia*); `target_pha_count` removed from `qc_summary.csv`.
-  - Removed: the unused analysis pages `01_`–`04_*.Rmd`, `_workflowr.yml`, the stale template `Scripts/config/secrets.env.example` and the pre-1.0.2 file `entrez_its_checks.csv`.
   - Filtering report: looks for pandoc in the RStudio, Quarto and Positron folders and writes Markdown if none is found; counts the occurrence file in chunks instead of loading it.
   - One general README; `ALA_Records/README.md` is now a short note on that folder.
 - **1.0.2 (2026-11-22)**: first working end-to-end version.
