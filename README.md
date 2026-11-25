@@ -6,7 +6,9 @@ modified: 2026-11-25
 
 Version 1.0.3 (2026-11-25). See [Version history](#version-history).
 
-This pipeline turns an Atlas of Living Australia (ALA) occurrence download into a reviewed species list for a CRABS (Creating Reference databases for Amplicon-Based Sequencing) reference database. It filters the records to the taxon you configure, cleans and canonicalises the names, resolves synonyms against a national name authority and NCBI Taxonomy, sends only doubtful names to manual review, counts the NCBI sequences of your barcode marker for every species, and writes one species per line in the spelling CRABS needs. Taxon, marker, filters and region flags are all set in one YAML file. The worked example in this repository is a pollen ITS list of NSW and Queensland seed plants ([Example 1](#example-1-pollen-its-list-for-nsw-and-qld-seed-plants)); a COI list for animals is sketched in [Example 2](#example-2-coi-for-animals-untested).
+This pipeline turns an Atlas of Living Australia (ALA) occurrence download into a reviewed species list for a CRABS (Creating Reference databases for Amplicon-Based Sequencing) reference database. It filters the records to the taxon you configure, cleans and canonicalises the names, resolves synonyms against a national name authority and NCBI Taxonomy, sends only doubtful names to manual review, counts the NCBI sequences of your barcode marker for every species, and writes one species per line in the spelling CRABS needs. Taxon, marker, filters and region flags are all set in one YAML file.
+
+It works for **Australian flora and fauna**: plants are resolved against the Australian Plant Census (APC, ALA kingdom Plantae, e.g. ITS, rbcL, matK), animals against the Australian Faunal Directory (AFD, ALA kingdom Animalia, e.g. COI). The same code runs for both; only the `taxon:`, `taxonomy:` and `marker:` settings change ([Name authority file](#name-authority-file-apc-or-afd-manual-download-required)). The worked example in this repository is a pollen ITS list of NSW and Queensland seed plants ([Example 1](#example-1-pollen-its-list-for-nsw-and-qld-seed-plants)). The fauna setup is shown in [Example 2](#example-2-coi-for-australian-fauna): the AFD reader, name matching and genus expansion are tested on an AFD Vespidae checklist, but a full fauna run to a CRABS list has not been done yet.
 
 All commands are run from the project root, the folder that contains this README, `Scripts/` and `renv.lock`.
 
@@ -19,7 +21,7 @@ All commands are run from the project root, the folder that contains this README
    ```
 
 2. Put your ALA download into `ALA_Records/`: one ZIP with the occurrence CSVs, e.g. `ALA_Records/plant_ala_records-2026-11-21/records-2026-11-21.zip`. Set `input.combined_zip` to its path and list the CSV names in `input.expected_members` in [`Scripts/config/ala_crabs.yml`](Scripts/config/ala_crabs.yml). To reproduce the example, download the two datasets from their DOIs ([Example 1](#example-1-pollen-its-list-for-nsw-and-qld-seed-plants)). The data are not in this repository.
-3. Download the name authority file by hand (APC for plants) and set `taxonomy.authority_file`; see [Name authority file](#name-authority-file-apc-or-afd-manual-download-required). For a group without an Australian authority, set `taxonomy.authority: none`.
+3. Download the name authority file by hand (APC for plants, AFD for fauna) and set `taxonomy.authority_file`; see [Name authority file](#name-authority-file-apc-or-afd-manual-download-required). For a group without an Australian authority, set `taxonomy.authority: none`.
 4. Check the `marker:` and `taxon:` blocks in the config ([Configuration](#configuration)).
 5. Copy `Scripts/secrets.env.example` to `Scripts/config/secrets.env` and fill in `NCBI_EMAIL` and `NCBI_API_KEY`.
 6. Run the pipeline. In R:
@@ -475,9 +477,9 @@ The CSVs of both downloads were renamed by hand to the part names above and zipp
 
 **Results.** Run of 2026-11-25 before the genus expansion: 12,119,773 raw records, 11,495,771 target records, 57,337 normalised names; 17,393 species in the CRABS list, including 36 named hybrids that NCBI lists as species; 3,949 names without an NCBI match; 1,199 species flagged `fnq_only`; 8,975 of the 19,243 checked names with at least one ITS sequence at NCBI. The final v1.0.3 run adds about 19 APC species and 8 NCBI phrase names (count to be updated after that run).
 
-## Example 2: COI for animals (untested)
+## Example 2: COI for Australian fauna
 
-A sketch of the keys to change for an animal COI list. The AFD reader has been tested on a Vespidae checklist (239 valid names; 3 of 19 test names matched NCBI below 6656), but the whole pipeline has not been run for animals.
+The keys to change for a fauna (animal) COI list. The AFD reader has been tested on a Vespidae checklist (239 valid names; 3 of 19 test names matched NCBI below 6656), but the whole pipeline has not been run for animals.
 
 ```yaml
 marker:

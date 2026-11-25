@@ -1,6 +1,6 @@
 project:
   name: ala_crabs_its
-  version: "1.0.3"
+  version: "1.0.4"
   target_rank: "Plantae"
 
 input:
@@ -104,17 +104,13 @@ target:
   # and exclude_genera_file to "".
   exclude_species_groups:
     - Ferns and allies
-  retain_ambiguous_names: true
   candidate_fields:
     - raw_scientificName
     - scientificName
     - acceptedNameUsage
     - originalNameUsage
-  retain_infraspecific: true
 
 taxonomy:
-  primary_source: ALA
-  primary_source_version: configured_input
   manual_decisions: Scripts/data/manual/taxonomy_decisions.csv
   secrets_file: Scripts/config/secrets.env
   entrez_workers: 4
@@ -139,6 +135,12 @@ taxonomy:
   # taxonomy.ncbi_root_taxid here is still read if taxon: has none). The dump is
   # downloaded once into ncbi_taxdump_dir; delete that folder to fetch a newer one.
   ncbi_taxdump_dir: Scripts/data/derived/ncbi_taxdump
+  # Genus expansion (crabs.expand_genus_from_authority): authority species count
+  # if their distribution lists one of these states (APC codes; AFD state names
+  # are mapped to them). Naturalised and doubtfully naturalised count; records
+  # with an excluded qualifier do not.
+  authority_states: [NSW, Qld, LHI]
+  authority_state_qualifiers_excluded: [presumed extinct]
 
 geography:
   # Coordinates outside these bands are treated as missing (e.g. 0,0 placeholders).
@@ -195,6 +197,17 @@ crabs:
   collapse_to_binomial: true
   # true: keep only species with at least one NCBI sequence for the marker above.
   require_marker_hit: false
+  # Genus-level names that are included (e.g. "Acaena sp. Thredbo River Gorge")
+  # cannot go to CRABS as they are. true adds the authority's accepted species of
+  # that genus in taxonomy.authority_states that are not in the list yet
+  # (audit: output.genus_expansion_audit).
+  expand_genus_from_authority: true
+  # For an authority without distributions (the AFD checklist export): true adds
+  # every accepted species of the genus (Australia-wide), false skips the expansion.
+  # Ignored for APC.
+  expand_genus_without_distribution: false
+  # Keep phrase names that NCBI lists as taxa (e.g. Samadera sp. Mt Nardi) under the NCBI name.
+  keep_ncbi_phrase_names: true
   # Region-flagged species (e.g. FNQ-only) are dropped per region with
   # geography.region_flags[].exclude. The old key exclude_fnq_only is deprecated
   # (still read: true excludes the region fnq_only).
@@ -219,3 +232,5 @@ output:
   input_manifest: Scripts/output/audit/input_manifest.csv
   synonym_matches: Scripts/data/derived/synonym_matches.csv
   ncbi_unmatched: Scripts/output/audit/ncbi_unmatched.csv
+  genus_expansion: Scripts/data/derived/genus_expansion.csv
+  genus_expansion_audit: Scripts/output/audit/genus_expansion_species.csv
