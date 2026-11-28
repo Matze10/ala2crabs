@@ -117,7 +117,7 @@ target:
     - originalNameUsage
 
 taxonomy:
-  manual_decisions: Scripts/data/manual/taxonomy_decisions.csv
+  manual_decisions: Scripts/data/manual/taxonomy_decisions_its.csv
   secrets_file: Scripts/config/secrets.env
   entrez_workers: 4
   request_interval_seconds: 0.11
@@ -219,25 +219,26 @@ crabs:
   # (still read: true excludes the region fnq_only).
 
 output:
-  database: Scripts/data/derived/ala_raw.sqlite
-  target_records: Scripts/data/derived/target_occurrences.csv
-  candidates: Scripts/data/derived/name_candidates.csv
-  normalised_names: Scripts/data/derived/name_candidates_normalised.csv
-  taxonomy_matches: Scripts/data/derived/taxonomy_matches.csv
-  review_queue: Scripts/data/derived/taxonomy_review_queue.csv
-  reviewed_species: Scripts/data/derived/reviewed_species.txt
-  entrez_checks: Scripts/data/derived/entrez_marker_checks.csv
-  ala_genus_checks: Scripts/output/audit/ala_genus_checks.csv
-  crabs_species_list: Scripts/output/crabs/crabs_species_list.txt
-  exclusions: Scripts/output/audit/exclusions.csv
-  review_queue_export: Scripts/output/audit/review_queue.csv
-  crabs_review_queue: Scripts/output/audit/crabs_review_queue.csv
-  qc: Scripts/output/audit/qc_summary.csv
-  latitude_flags: Scripts/data/derived/species_latitude_flags.csv
-  region_flagged_species: Scripts/output/audit/region_flagged_species.csv
-  input_manifest: Scripts/output/audit/input_manifest.csv
-  synonym_matches: Scripts/data/derived/synonym_matches.csv
-  ncbi_unmatched: Scripts/output/audit/ncbi_unmatched.csv
-  genus_expansion: Scripts/data/derived/genus_expansion.csv
-  genus_expansion_audit: Scripts/output/audit/genus_expansion_species.csv
-  report_dir: Scripts/output/reports
+  # Own paths (its/), as Example 2 uses coi/; the caches in taxonomy: are shared.
+  database: Scripts/data/derived/its/ala_raw.sqlite
+  target_records: Scripts/data/derived/its/target_occurrences.csv
+  candidates: Scripts/data/derived/its/name_candidates.csv
+  normalised_names: Scripts/data/derived/its/name_candidates_normalised.csv
+  taxonomy_matches: Scripts/data/derived/its/taxonomy_matches.csv
+  review_queue: Scripts/data/derived/its/taxonomy_review_queue.csv
+  reviewed_species: Scripts/data/derived/its/reviewed_species.txt
+  entrez_checks: Scripts/data/derived/its/entrez_marker_checks.csv
+  ala_genus_checks: Scripts/output/its/audit/ala_genus_checks.csv
+  crabs_species_list: Scripts/output/its/crabs/crabs_species_list.txt
+  exclusions: Scripts/output/its/audit/exclusions.csv
+  review_queue_export: Scripts/output/its/audit/review_queue.csv
+  crabs_review_queue: Scripts/output/its/audit/crabs_review_queue.csv
+  qc: Scripts/output/its/audit/qc_summary.csv
+  latitude_flags: Scripts/data/derived/its/species_latitude_flags.csv
+  region_flagged_species: Scripts/output/its/audit/region_flagged_species.csv
+  input_manifest: Scripts/output/its/audit/input_manifest.csv
+  synonym_matches: Scripts/data/derived/its/synonym_matches.csv
+  ncbi_unmatched: Scripts/output/its/audit/ncbi_unmatched.csv
+  genus_expansion: Scripts/data/derived/its/genus_expansion.csv
+  genus_expansion_audit: Scripts/output/its/audit/genus_expansion_species.csv
+  report_dir: Scripts/output/its/reports

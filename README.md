@@ -43,7 +43,7 @@ All commands are run from the project root, the folder that contains this README
    & "C:/Program Files/R/R-4.6.2/bin/Rscript.exe" -e "targets::tar_make(script = 'Scripts/_targets.R')"
    ```
 
-For Example 1, the first run takes about 6 hours: roughly 2.5 hours of local steps (SQLite import, filtering, region flags, names) and about 3 hours for the NCBI checks of ~26,000 names. A full rerun with the NCBI results cached takes about 3.5 hours. Example 2 has not been run yet; its NCBI and ALA genus checks all start fresh. Later runs rerun only the steps whose code, configuration or inputs changed. Any edit to `ala_crabs.yml` reruns almost everything, because every step reads it.
+For Example 1, the first run takes about 6 hours: roughly 2.5 hours of local steps (SQLite import, filtering, region flags, names) and about 3 hours for the NCBI checks of ~26,000 names. A full rerun with the NCBI results cached takes about 3.5 hours. For Example 2 (first run 2026-11-28) the local steps took about 45 minutes, and the NCBI check covers 39,923 species, about 1.5 times the plants; its NCBI and ALA genus checks start fresh. Later runs rerun only the steps whose code, configuration or inputs changed. Any edit to `ala_crabs.yml` reruns almost everything, because every step reads it.
 
 ### Setting up from Git on another machine
 
@@ -77,16 +77,16 @@ config
 ```
 
 1. **Configuration** (`config_file`, `config`). The YAML is read and the `marker:` block checked; the pipeline stops at once if the marker is missing.
-2. **Archive checks** (`input_validation`, `input_manifest_file`, `header_validation`). The ZIP must exist and contain every file in `input.expected_members`; its size and MD5 go to `Scripts/output/audit/input_manifest.csv`, and all CSV headers must match.
-3. **SQLite import** (`raw_database`). The CSVs are streamed out of the ZIP into `Scripts/data/derived/ala_raw.sqlite` (about 10 minutes for the example).
-4. **Genus check** (`ala_genus_checks`, `excluded_genera`). Every genus is looked up in ALA name matching (`taxon.ala_kingdom`). Genera in an `exclude_orders` order or an `exclude_species_groups` group are excluded, plus the genera in `exclude_genera_file`. Audit: `Scripts/output/audit/ala_genus_checks.csv`.
-5. **Target records** (`target_records`). Species-level and infraspecific records (`target.accepted_ranks`) of the configured kingdom, without the excluded phyla, classes, orders and genera, are written to `Scripts/data/derived/target_occurrences.csv`. Garden and cultivated records count.
+2. **Archive checks** (`input_validation`, `input_manifest_file`, `header_validation`). The ZIP must exist and contain every file in `input.expected_members`; its size and MD5 go to `Scripts/output/its/audit/input_manifest.csv`, and all CSV headers must match.
+3. **SQLite import** (`raw_database`). The CSVs are streamed out of the ZIP into `Scripts/data/derived/its/ala_raw.sqlite` (about 10 minutes for the example).
+4. **Genus check** (`ala_genus_checks`, `excluded_genera`). Every genus is looked up in ALA name matching (`taxon.ala_kingdom`). Genera in an `exclude_orders` order or an `exclude_species_groups` group are excluded, plus the genera in `exclude_genera_file`. Audit: `Scripts/output/its/audit/ala_genus_checks.csv`.
+5. **Target records** (`target_records`). Species-level and infraspecific records (`target.accepted_ranks`) of the configured kingdom, without the excluded phyla, classes, orders and genera, are written to `Scripts/data/derived/its/target_occurrences.csv`. Garden and cultivated records count.
 6. **Region flags** (`latitude_flags`). Species whose records all lie inside a configured latitude/longitude area are flagged ([Region flags](#geography-region-flags)).
 7. **Candidate names** (`candidates`). Every distinct name string from the ALA name fields, counted in SQLite.
 8. **Canonical names** (`normalised_names`). Authorities are stripped and rank markers standardised (`helpers_canonical_names.R`), including names with invisible spaces, a trailing `*`, or a common name in brackets or before a dash.
 9. **Review queue** (`review_queue`). Clean species and infraspecific names are proposed `include`; doubtful names (sp./phrase names, cf./aff./?, hybrids, a/b names, genus only) get no decision.
 10. **Synonyms** (`authority_file`, `ncbi_taxdump`, `synonym_matches`). Every name is resolved against the name authority and then matched to a local copy of NCBI Taxonomy ([What the synonym step does](#what-the-synonym-step-does)).
-11. **Manual decisions** (`validated_decisions`, `taxonomy_matches`, `reviewed_species`). `taxonomy_decisions.csv` is checked, the review sheet written, and the final decision per name applied: manual first, automatic otherwise ([Manual review](#manual-review)).
+11. **Manual decisions** (`validated_decisions`, `taxonomy_matches`, `reviewed_species`). `taxonomy_decisions_its.csv` is checked, the review sheet written, and the final decision per name applied: manual first, automatic otherwise ([Manual review](#manual-review)).
 12. **Genus expansion** (`genus_expansion`). Included genus-level names add the phrase names NCBI lists and the authority's species of the genus in the configured states ([Genus expansion](#genus-expansion-and-ncbi-phrase-names)).
 13. **NCBI marker counts** (`entrez_checks`). For every included species, the NCBI taxonomy ID and the number of nucleotide sequences for the marker ([`marker`](#marker-barcode-marker-and-the-ncbi-query)).
 14. **Outputs** (`crabs_outputs`, `qc_file`, `filtering_report`). The CRABS list, audit files, QC summary and the HTML report ([Outputs](#outputs)).
@@ -112,7 +112,7 @@ file.copy("Scripts/config/ala_crabs_its_plants.yml", "Scripts/config/ala_crabs.y
 file.copy("Scripts/config/ala_crabs_coi_arthropods.yml", "Scripts/config/ala_crabs.yml", overwrite = TRUE)  # Example 2
 ```
 
-If you change settings for a run, make the change in the example file as well (or save your own copy under a new name), so the active config can always be restored from a named file. The two examples write to different `output:` paths (Example 2 under `Scripts/data/derived/coi/` and `Scripts/output/coi/`), so switching does not overwrite the other example's results. There is one `targets` store (`_targets/`) for both: after a switch, `tar_make()` reruns every step for the new config.
+If you change settings for a run, make the change in the example file as well (or save your own copy under a new name), so the active config can always be restored from a named file. Each example writes to its own folders, Example 1 to `Scripts/data/derived/its/` and `Scripts/output/its/`, Example 2 to `Scripts/data/derived/coi/` and `Scripts/output/coi/` (and its own decision file), so switching does not overwrite the other example's results. There is one `targets` store (`_targets/`) for both: after a switch, `tar_make()` reruns every step for the new config.
 
 ### `project`
 
@@ -137,7 +137,7 @@ marker:
   entrez_query: ITS[Title] OR internal transcribed spacer[All Fields]
 ```
 
-For every species in `Scripts/data/derived/reviewed_species.txt` the pipeline runs two NCBI searches:
+For every species in `Scripts/data/derived/its/reviewed_species.txt` the pipeline runs two NCBI searches:
 
 1. NCBI Taxonomy: `"<species>"[Scientific Name]` gives the taxonomy ID and NCBI name (independent of the marker and the taxon).
 2. NCBI Nucleotide: `"<species>"[Organism] AND (<entrez_query>)`, plus `AND (<taxon.ncbi_organism_filter>)` if that is set, gives the number of sequences for the marker. For *Acacia aneura* with the ITS setting:
@@ -146,7 +146,7 @@ For every species in `Scripts/data/derived/reviewed_species.txt` the pipeline ru
    "Acacia aneura"[Organism] AND (ITS[Title] OR internal transcribed spacer[All Fields])
    ```
 
-Results go to `Scripts/data/derived/entrez_marker_checks.csv` (columns `ncbi_taxonomy_ids`, `ncbi_scientific_names`, `marker`, `ncbi_marker_hits`, `entrez_status`). To use another marker, change both lines. `entrez_query` is plain NCBI search syntax without the `[Organism]` part, which the pipeline adds; test it on the NCBI Nucleotide website first.
+Results go to `Scripts/data/derived/its/entrez_marker_checks.csv` (columns `ncbi_taxonomy_ids`, `ncbi_scientific_names`, `marker`, `ncbi_marker_hits`, `entrez_status`). To use another marker, change both lines. `entrez_query` is plain NCBI search syntax without the `[Organism]` part, which the pipeline adds; test it on the NCBI Nucleotide website first.
 
 | Marker | `entrez_query` |
 |---|---|
@@ -199,7 +199,7 @@ For another group, set `exclude_phyla`, `exclude_classes`, `exclude_orders` and 
 | Key | What it does |
 |---|---|
 | `authority`, `authority_file` | Name authority: `APC`, `AFD` or `none`, and the path of its CSV, made with `Scripts/prepare_apc.R` or `Scripts/prepare_afd_from_ala.R` and pinned by its tracking file ([Name authority file](#name-authority-file-apc-or-afd)). |
-| `manual_decisions` | The decision file ([Manual review](#manual-review)): `Scripts/data/manual/taxonomy_decisions.csv` (Example 1), `Scripts/data/manual/taxonomy_decisions_coi.csv` (Example 2). |
+| `manual_decisions` | The decision file ([Manual review](#manual-review)): `Scripts/data/manual/taxonomy_decisions_its.csv` (Example 1), `Scripts/data/manual/taxonomy_decisions_coi.csv` (Example 2). |
 | `secrets_file` | `Scripts/config/secrets.env` with `NCBI_EMAIL` and `NCBI_API_KEY`. |
 | `request_interval_seconds` | Pause between NCBI requests per worker. |
 | `entrez_workers` | Optional; parallel NCBI workers (default 4 with an API key, 1 without). |
@@ -268,7 +268,7 @@ A species can be flagged by several areas; the column `region_flags` then lists 
 
 Use `boxes:` for one flag and one column for species found only in some combination of places (here: only on Lord Howe and/or in the Torres Strait). Use separate areas for a separate flag per place; then a species recorded in both places gets neither flag, because its records are not all inside one area.
 
-Outputs: `Scripts/data/derived/species_latitude_flags.csv` (every species with `n_records`, `n_georeferenced`, the extreme coordinates, and per area `n_inside_<name>`, `n_outside_<name>` and the TRUE/FALSE column `<name>`), `Scripts/output/audit/region_flagged_species.csv` (every flagged species, with `in_crabs_list`), and the columns `region_flags` plus one per area in `review_queue.csv` and `crabs_review_queue.csv`. Changing an area reruns the flag step (about 20 minutes for the example) and the steps after it. Without `region_flags`, the old `geography.fnq_boundary_latitude` (default -16.92) gives the single area `fnq_only`.
+Outputs: `Scripts/data/derived/its/species_latitude_flags.csv` (every species with `n_records`, `n_georeferenced`, the extreme coordinates, and per area `n_inside_<name>`, `n_outside_<name>` and the TRUE/FALSE column `<name>`), `Scripts/output/its/audit/region_flagged_species.csv` (every flagged species, with `in_crabs_list`), and the columns `region_flags` plus one per area in `review_queue.csv` and `crabs_review_queue.csv`. Changing an area reruns the flag step (about 20 minutes for the example) and the steps after it. Without `region_flags`, the old `geography.fnq_boundary_latitude` (default -16.92) gives the single area `fnq_only`.
 
 ### `crabs`: CRABS list options
 
@@ -297,13 +297,13 @@ Genus-level decisions (e.g. "Acacia sp. New England (J.B.Williams 97011)" decide
 1. **NCBI phrase names** (`keep_ncbi_phrase_names`). The phrase name is looked up in the NCBI Taxonomy dump below `taxon.ncbi_root_taxid`, first as written and then without the voucher in brackets and a trailing "<state> Herbarium". If NCBI lists it (e.g. *Samadera* sp. Mt Nardi, *Olearia* sp. Rhizomatica (I.R.Telford 11549)), the exact NCBI scientific name goes into the list. Included names that the synonym step matched to an NCBI phrase name are written the same way. These are the only lines of the list that are not "Genus epithet", apart from named hybrids.
 2. **Authority species** (`expand_genus_from_authority`). The name authority's accepted species of the genus whose distribution lists one of `taxonomy.authority_states` (without an excluded qualifier) are added if they are not in the list yet. They are mapped to NCBI like the synonym step: accepted name, authority synonyms, Latin ending variants. This works the same for plants (APC) and fauna (AFD). The AFD checklist export has no distribution column, so for AFD the state filter cannot be applied: with `crabs.expand_genus_without_distribution: true` every accepted AFD species of the genus is added (the AFD covers Australian fauna, so this is Australia-wide, not NSW/Qld only); with `false` (default) the expansion is skipped with a message. With `authority: none` it is always skipped. If an AFD file has a `DISTRIBUTION` or `STATES` column, the state filter is used as for APC.
 
-Expanded species have no ALA records of their own, so they get no region flags; they still pass the hybrid and `require_marker_hit` filters and get NCBI marker counts. Everything added is listed in `Scripts/output/audit/genus_expansion_species.csv` (`source` = `ncbi_phrase_name` or `authority_genus_expansion`, the genus, the genus-level names it came from, authority name, ID and distribution, CRABS name, NCBI taxid and `ncbi_match_via`). In the example, 19 authority species and 8 NCBI phrase names are added.
+Expanded species have no ALA records of their own, so they get no region flags; they still pass the hybrid and `require_marker_hit` filters and get NCBI marker counts. Everything added is listed in `Scripts/output/its/audit/genus_expansion_species.csv` (`source` = `ncbi_phrase_name` or `authority_genus_expansion`, the genus, the genus-level names it came from, authority name, ID and distribution, CRABS name, NCBI taxid and `ncbi_match_via`). In the example, 19 authority species and 8 NCBI phrase names are added.
 
 **`require_marker_hit`: `false` is recommended.** CRABS downloads sequences per name anyway: a species without a sequence contributes nothing, but keeping it makes the list a complete inventory of the target flora or fauna, and the count can still be used to filter later. Use `true` only if the list itself should show what the reference database can contain. In the example about half of the checked names (8,975 of 19,243) had an ITS sequence.
 
 ### `output`
 
-Paths of all derived files and outputs, including the report folder (`report_dir`, default `Scripts/output/reports`). The code and the report take every path from this block. Example 1 keeps intermediates in `Scripts/data/derived/` (not tracked) and the final files in `Scripts/output/`; Example 2 uses `Scripts/data/derived/coi/` and `Scripts/output/coi/`. The paths in [Outputs](#outputs) are those of Example 1.
+Paths of all derived files and outputs, including the report folder (`report_dir`; without it `Scripts/output/reports`). The code and the report take every path from this block. Each example has its own folders: intermediates (not tracked) in `Scripts/data/derived/its/` (Example 1) or `Scripts/data/derived/coi/` (Example 2), final files in `Scripts/output/its/` or `Scripts/output/coi/`. Only the caches in `taxonomy:` (`entrez_cache/`, `ala_genus_cache/`, `ncbi_taxdump/` in `Scripts/data/derived/`) are shared; they are keyed by marker and kingdom. The paths in [Outputs](#outputs) are those of Example 1; for Example 2 replace `its/` by `coi/`.
 
 ## Name authority file (APC or AFD)
 
@@ -373,8 +373,8 @@ The reader (`read_afd()` in `helpers_synonyms.R`) uses the columns `GENUS`, `SPE
 
 For every canonical name, the authority's accepted name is used for synonyms and orthographic variants (misapplied, pro parte, doubtful and excluded entries are not followed). NCBI Taxonomy, below `taxon.ncbi_root_taxid`, is then searched for, in order: the accepted name, the ALA name, the other synonyms of the accepted taxon, and Latin gender-ending variants (`-us`/`-a`/`-um` ...). The NCBI scientific name of the first hit becomes the name in the CRABS list, because CRABS queries NCBI with `"<name>"[Organism]`. The route is recorded in `ncbi_match_via` (`authority_accepted`, `ala_name`, `authority_synonym`, `ending_variant` or `no_match`).
 
-- `Scripts/data/derived/synonym_matches.csv`: one row per canonical name with `authority_status`, `authority_accepted_name`, `authority_taxon_id`, `ncbi_taxid`, `ncbi_name`, `ncbi_match_via` and `crabs_name`.
-- `Scripts/output/audit/ncbi_unmatched.csv`: names with no NCBI match. They stay in the list under their authority or ALA name; CRABS will find no sequences for them.
+- `Scripts/data/derived/its/synonym_matches.csv`: one row per canonical name with `authority_status`, `authority_accepted_name`, `authority_taxon_id`, `ncbi_taxid`, `ncbi_name`, `ncbi_match_via` and `crabs_name`.
+- `Scripts/output/its/audit/ncbi_unmatched.csv`: names with no NCBI match. They stay in the list under their authority or ALA name; CRABS will find no sequences for them.
 - In `taxonomy_matches.csv`, `authority` / `authority_version` read e.g. `APC; NCBI Taxonomy` / `APC 2026-11-17; NCBI taxdump 2026-11-24`. Manual decisions keep their accepted name; only a blank or `Author` authority is filled.
 
 Replacing the authority file, or changing `taxonomy.authority` or `taxon.ncbi_root_taxid`, reruns the matching and the steps after it. A newer APC or AFD version is taken with the script's `--update` ([Version pinning](#version-pinning-tracking-files)).
@@ -385,14 +385,14 @@ Replacing the authority file, or changing `taxonomy.authority` or `taxon.ncbi_ro
 
 The paths below are those of Example 1. Example 2 uses `Scripts/output/coi/audit/review_queue.csv` and `Scripts/data/manual/taxonomy_decisions_coi.csv` (`taxonomy.manual_decisions`, `output.review_queue_export`).
 
-Names that parse to a clean species or infraspecific name are included automatically, so most names (~57,000 in the example) do not need a decision. Only doubtful names need one: sp./phrase names and sp. nov., cf./aff./?, hybrids, a/b names, complexes and intergrades, and names without a species epithet. A row in `taxonomy_decisions.csv` always overrides the automatic proposal, so a clean name can also be excluded or corrected there.
+Names that parse to a clean species or infraspecific name are included automatically, so most names (~57,000 in the example) do not need a decision. Only doubtful names need one: sp./phrase names and sp. nov., cf./aff./?, hybrids, a/b names, complexes and intergrades, and names without a species epithet. A row in `taxonomy_decisions_its.csv` always overrides the automatic proposal, so a clean name can also be excluded or corrected there.
 
 ### The two files
 
-- **`Scripts/output/audit/review_queue.csv`: the review sheet.** You edit it; the pipeline rewrites it on every run. It lists every review candidate, plus any other name that has a row in `taxonomy_decisions.csv`. The decision columns are always blank. The first nine columns are in the same order as `taxonomy_decisions.csv`; after them come the evidence columns `in_taxonomy_decisions`, `why_review`, `suggested_name`, `canonical_rank`, `occurrence_records` and the region-flag columns. Rows without a decision are sorted to the top. The file is UTF-8 with a BOM so Excel shows special characters correctly.
-- **`Scripts/data/manual/taxonomy_decisions.csv`: the decisions.** The pipeline only reads it. One row per name.
+- **`Scripts/output/its/audit/review_queue.csv`: the review sheet.** You edit it; the pipeline rewrites it on every run. It lists every review candidate, plus any other name that has a row in `taxonomy_decisions_its.csv`. The decision columns are always blank. The first nine columns are in the same order as `taxonomy_decisions_its.csv`; after them come the evidence columns `in_taxonomy_decisions`, `why_review`, `suggested_name`, `canonical_rank`, `occurrence_records` and the region-flag columns. Rows without a decision are sorted to the top. The file is UTF-8 with a BOM so Excel shows special characters correctly.
+- **`Scripts/data/manual/taxonomy_decisions_its.csv`: the decisions.** The pipeline only reads it. One row per name.
 
-`Scripts/data/derived/manual_review_queue.csv` is a plain list of the same doubtful names without decision columns. `Scripts/data/derived/taxonomy_review_queue.csv` is the full proposal table for all names; it is not meant for editing.
+`Scripts/data/derived/its/manual_review_queue.csv` is a plain list of the same doubtful names without decision columns. `Scripts/data/derived/its/taxonomy_review_queue.csv` is the full proposal table for all names; it is not meant for editing.
 
 ### Steps
 
@@ -403,7 +403,7 @@ Names that parse to a clean species or infraspecific name are included automatic
    ```
 
 2. Fill in the first nine columns of `review_queue.csv` for the rows you decide.
-3. Copy those nine columns of the decided rows into `taxonomy_decisions.csv`.
+3. Copy those nine columns of the decided rows into `taxonomy_decisions_its.csv`.
 4. Close both files in Excel (Windows blocks writing to an open file) and run `tar_make()`.
 
 If `review_queue.csv` contains typed decisions when the pipeline rewrites it, a timestamped copy is first saved in `Scripts/data/manual/review_queue_backups/`.
@@ -439,14 +439,14 @@ A run writes many files, but you only need a few. Everything else is either an a
 
 | File | What it is |
 |---|---|
-| `Scripts/output/crabs/crabs_species_list.txt` | **The CRABS input**: one species per line (NCBI spelling). This is the file you give to CRABS. |
-| `Scripts/output/reports/05_filtering_summary.html` | Report of the counts through the filters, the decisions and the region flags (`.md` if pandoc is not found). |
+| `Scripts/output/its/crabs/crabs_species_list.txt` | **The CRABS input**: one species per line (NCBI spelling). This is the file you give to CRABS. |
+| `Scripts/output/its/reports/05_filtering_summary.html` | Report of the counts through the filters, the decisions and the region flags (`.md` if pandoc is not found). |
 
 ### 2. The file you edit
 
 | File | What it is |
 |---|---|
-| `Scripts/output/audit/review_queue.csv` | Review sheet for doubtful names (rewritten every run, not tracked). Fill in the decision columns and copy them into `Scripts/data/manual/taxonomy_decisions.csv` ([Manual review](#manual-review)), which is tracked. |
+| `Scripts/output/its/audit/review_queue.csv` | Review sheet for doubtful names (rewritten every run, not tracked). Fill in the decision columns and copy them into `Scripts/data/manual/taxonomy_decisions_its.csv` ([Manual review](#manual-review)), which is tracked. |
 
 ### 3. Audit files (optional)
 
@@ -454,18 +454,18 @@ Open these to check or explain the list; nothing else needs them. The ones marke
 
 | File | What it is | In Git |
 |---|---|---|
-| `Scripts/output/audit/qc_summary.csv` | The numbers of the run in one table (`section`, `metric`, `value`, `description`): records, names, decisions, authority and NCBI matches, genus expansion, NCBI marker check, CRABS list (binomials, hybrids, phrase names, lines with marker sequences) and region flags. | yes |
-| `Scripts/output/audit/exclusions.csv` | Names with decision `exclude` or `insufficient_evidence`. | yes |
-| `Scripts/output/audit/ncbi_unmatched.csv` | Names with no NCBI Taxonomy match (they cannot reach CRABS). | yes |
-| `Scripts/output/audit/region_flagged_species.csv` | Species flagged by any area, with counts and whether each is in the CRABS list. | yes |
-| `Scripts/output/audit/genus_expansion_species.csv` | Species added by the genus expansion and NCBI phrase names, with their source genus-level names. | yes |
-| `Scripts/output/audit/crabs_review_queue.csv` | Names still without a decision, with their NCBI results. | no |
-| `Scripts/output/audit/ala_genus_checks.csv` | ALA name-matching result per genus and why a genus was excluded. | no |
-| `Scripts/output/audit/input_manifest.csv` | The input files with size and MD5 checksum. | no |
+| `Scripts/output/its/audit/qc_summary.csv` | The numbers of the run in one table (`section`, `metric`, `value`, `description`): records, names, decisions, authority and NCBI matches, genus expansion, NCBI marker check, CRABS list (binomials, hybrids, phrase names, lines with marker sequences) and region flags. | yes |
+| `Scripts/output/its/audit/exclusions.csv` | Names with decision `exclude` or `insufficient_evidence`. | yes |
+| `Scripts/output/its/audit/ncbi_unmatched.csv` | Names with no NCBI Taxonomy match (they cannot reach CRABS). | yes |
+| `Scripts/output/its/audit/region_flagged_species.csv` | Species flagged by any area, with counts and whether each is in the CRABS list. | yes |
+| `Scripts/output/its/audit/genus_expansion_species.csv` | Species added by the genus expansion and NCBI phrase names, with their source genus-level names. | yes |
+| `Scripts/output/its/audit/crabs_review_queue.csv` | Names still without a decision, with their NCBI results. | no |
+| `Scripts/output/its/audit/ala_genus_checks.csv` | ALA name-matching result per genus and why a genus was excluded. | no |
+| `Scripts/output/its/audit/input_manifest.csv` | The input files with size and MD5 checksum. | no |
 
 ### 4. Intermediate files (not tracked, rebuilt by the pipeline)
 
-`Scripts/data/derived/` holds the step-by-step files and caches. You do not need to open them, but `targets` uses them to skip steps that have not changed. The two large ones are `ala_raw.sqlite` (~7 GB) and `target_occurrences.csv` (~5 GB); see [Cleaning up disk space](#cleaning-up-disk-space) before deleting anything.
+`Scripts/data/derived/its/` (Example 2: `coi/`) holds the step-by-step files, `Scripts/data/derived/` the shared caches. You do not need to open them, but `targets` uses them to skip steps that have not changed. The two large ones are `ala_raw.sqlite` (~7 GB) and `target_occurrences.csv` (~5 GB); see [Cleaning up disk space](#cleaning-up-disk-space) before deleting anything.
 
 | File or folder | Step |
 |---|---|
@@ -484,17 +484,17 @@ Open these to check or explain the list; nothing else needs them. The ones marke
 ### Confirm outputs
 
 ```r
-readLines("Scripts/output/crabs/crabs_species_list.txt")            # one species per line
-data.table::fread("Scripts/data/derived/synonym_matches.csv")      # authority and NCBI names
-data.table::fread("Scripts/output/audit/ncbi_unmatched.csv")
-data.table::fread("Scripts/data/derived/entrez_marker_checks.csv") # marker sequence counts
-data.table::fread("Scripts/output/audit/review_queue.csv")         # review sheet
-data.table::fread("Scripts/output/audit/crabs_review_queue.csv")
-data.table::fread("Scripts/output/audit/exclusions.csv")
-data.table::fread("Scripts/output/audit/region_flagged_species.csv")
-data.table::fread("Scripts/output/audit/genus_expansion_species.csv")
-data.table::fread("Scripts/output/audit/ala_genus_checks.csv")
-data.table::fread("Scripts/output/audit/qc_summary.csv")
+readLines("Scripts/output/its/crabs/crabs_species_list.txt")            # one species per line
+data.table::fread("Scripts/data/derived/its/synonym_matches.csv")      # authority and NCBI names
+data.table::fread("Scripts/output/its/audit/ncbi_unmatched.csv")
+data.table::fread("Scripts/data/derived/its/entrez_marker_checks.csv") # marker sequence counts
+data.table::fread("Scripts/output/its/audit/review_queue.csv")         # review sheet
+data.table::fread("Scripts/output/its/audit/crabs_review_queue.csv")
+data.table::fread("Scripts/output/its/audit/exclusions.csv")
+data.table::fread("Scripts/output/its/audit/region_flagged_species.csv")
+data.table::fread("Scripts/output/its/audit/genus_expansion_species.csv")
+data.table::fread("Scripts/output/its/audit/ala_genus_checks.csv")
+data.table::fread("Scripts/output/its/audit/qc_summary.csv")
 targets::tar_meta(fields = c(name, bytes, time, seconds, warnings, error))
 ```
 
@@ -543,8 +543,8 @@ Sizes measured for the example after the 1.0.3 and 1.0.4 runs (November 2026).
 
 | File or folder | Size | What it is for | Safe to delete? | Cost on the next run |
 |---|---|---|---|---|
-| `Scripts/data/derived/target_occurrences.csv` | 5.0 GB | Filtered records (result of `target_records`) | Yes | Filtering and all later steps rerun (about 2 h) |
-| `Scripts/data/derived/ala_raw.sqlite` (+ `-wal`, `-shm`) | 4.5 GB + 0.9 GB (up to ~7 GB during an import) | SQLite copy of the ALA ZIP | Yes | Import (about 10 min) plus everything after it |
+| `Scripts/data/derived/its/target_occurrences.csv` | 5.0 GB | Filtered records (result of `target_records`) | Yes | Filtering and all later steps rerun (about 2 h) |
+| `Scripts/data/derived/its/ala_raw.sqlite` (+ `-wal`, `-shm`) | 4.5 GB + 0.9 GB (up to ~7 GB during an import) | SQLite copy of the ALA ZIP | Yes | Import (about 10 min) plus everything after it |
 | `ALA_Records/plant_ala_records-2026-11-21/records-2026-11-21.zip` | 3.0 GB | The ALA download (input) | No, unless you can download it again | Needed for any rerun |
 | `Scripts/data/derived/ncbi_taxdump/` | 530 MB | Local NCBI Taxonomy for the synonym step | Yes | Dump downloaded again (minutes) |
 | `ALA_Records/insect_ala_records-2026-11-28/records-2026-11-28.zip` | 0.8 GB | The Example 2 ALA download (input) | No, unless you can download it again | Needed for any rerun of Example 2 |
@@ -554,7 +554,7 @@ Sizes measured for the example after the 1.0.3 and 1.0.4 runs (November 2026).
 | `Scripts/data/derived/ala_genus_cache/` | 2 MB | ALA name matching per genus | Keep | All genera checked again |
 | `_targets/` | < 1 MB | `targets` metadata; results are stored as the files above | Only to force a full rerun | Everything reruns |
 
-The large files can all be rebuilt from the ZIP and the authority file; deleting them after a final run is safe, but the next run then takes the full time. Not used by the current code, and safe to delete: `ALA_Records/ALA_terrestrial_inventory.sqlite` (+ `-wal`, `-shm`; 8.1 GB + 1.1 GB, an earlier database).
+The large files can all be rebuilt from the ZIP and the authority file; deleting them after a final run is safe, but the next run then takes the full time.
 
 ## Example 1: pollen ITS list for NSW and QLD seed plants
 
@@ -579,11 +579,11 @@ The CSVs of both downloads were renamed by hand to the part names above and zipp
 - sp. phrase names, sp. nov., `Genus subsp. x`: the plain genus name (`Acacia`, not `Acacia sp`), rank `genus`, include. Genus-level names are not written to the CRABS list as genera; the [genus expansion](#genus-expansion-and-ncbi-phrase-names) adds the NCBI phrase names and the APC species of those genera instead.
 - a/b names, complexes, intergrades, `A ? B`, unusable labels: exclude, reason `rejected`.
 
-**Results.** Final 1.0.4 run of 2026-11-25 (clean start, 2 h 24 min with the NCBI results of the stopped first attempt cached; a fully fresh run takes about 6 h): 12,119,773 raw records, 11,495,771 target records, 57,399 normalised names; **17,423 species in the CRABS list**, including 36 named hybrids and 11 phrase names that NCBI lists as taxa; 27 lines added by the genus expansion (19 APC species and 8 NCBI phrase names, see `genus_expansion_species.csv`); 3,949 names without an NCBI match; 1,199 species flagged `fnq_only` (kept); 8,987 of the 19,273 checked names with at least one ITS sequence at NCBI. No target ended with a warning or error. All numbers are in `Scripts/output/audit/qc_summary.csv`.
+**Results.** Final 1.0.4 run of 2026-11-25 (clean start, 2 h 24 min with the NCBI results of the stopped first attempt cached; a fully fresh run takes about 6 h): 12,119,773 raw records, 11,495,771 target records, 57,399 normalised names; **17,423 species in the CRABS list**, including 36 named hybrids and 11 phrase names that NCBI lists as taxa; 27 lines added by the genus expansion (19 APC species and 8 NCBI phrase names, see `genus_expansion_species.csv`); 3,949 names without an NCBI match; 1,199 species flagged `fnq_only` (kept); 8,987 of the 19,273 checked names with at least one ITS sequence at NCBI. No target ended with a warning or error. All numbers are in `Scripts/output/its/audit/qc_summary.csv`.
 
 ## Example 2: COI list for NSW and QLD arthropods without crustaceans
 
-Config: [`Scripts/config/ala_crabs_coi_arthropods.yml`](Scripts/config/ala_crabs_coi_arthropods.yml) (copy it to `ala_crabs.yml` to run it). Purpose: a COI reference list of the NSW and QLD arthropods without crustaceans (insects, arachnids, myriapods, springtails, sea spiders and the other non-crustacean classes). Not yet run to a CRABS list.
+Config: [`Scripts/config/ala_crabs_coi_arthropods.yml`](Scripts/config/ala_crabs_coi_arthropods.yml) (copy it to `ala_crabs.yml` to run it). Purpose: a COI reference list of the NSW and QLD arthropods without crustaceans (insects, arachnids, myriapods, springtails, sea spiders and the other non-crustacean classes). First run started on 2026-11-28 (no CRABS list yet): 73,638 names included automatically and 125 doubtful names for review; 39,923 species go to the NCBI COI check.
 
 **Data.** Two ALA occurrence downloads made on 2026-11-28 with ALA species group **Arthropods**, one per state, with the same filters: no fossil or eDNA records, no duplicates across datasets, no cultivated or captive records, no taxon-match problems, no absence records, no records needing identification, no records before 1700, no records with open user assertions or coordinate problems (0,0, swapped or negated, state or country centroid), spatially valid only, fewer than 3 environmental outlier layers, coordinate uncertainty up to 10 km. The full query is in each metadata folder's `README.html`.
 
@@ -631,7 +631,7 @@ output:                               # all paths under Scripts/data/derived/coi
 
 ## Repository
 
-Tracked in Git: the code in `Scripts/`, the configuration, the manual inputs (`Scripts/data/manual/taxonomy_decisions.csv`, `fern_lycophyte_genera.txt`), the READMEs, `LICENSE`, `.Rprofile`, `.here`, `renv.lock` with `renv/activate.R` and `renv/settings.json`, the ALA download metadata (citation, DOI, headings, search settings), the `*_download_info.txt` tracking files of the authority CSVs, and the small final outputs (`crabs_species_list.txt`, `exclusions.csv`, `ncbi_unmatched.csv`, `qc_summary.csv`, `region_flagged_species.csv`, `genus_expansion_species.csv`) of both examples (`Scripts/output/` and `Scripts/output/coi/`).
+Tracked in Git: the code in `Scripts/`, the configuration, the manual inputs (`Scripts/data/manual/`: decision files, `fern_lycophyte_genera.txt`), the READMEs, `LICENSE`, `.Rprofile`, `.here`, `renv.lock` with `renv/activate.R` and `renv/settings.json`, the ALA download metadata (citation, DOI, headings, search settings), the `*_download_info.txt` tracking files of the authority CSVs, and the small final outputs (`crabs_species_list.txt`, `exclusions.csv`, `ncbi_unmatched.csv`, `qc_summary.csv`, `region_flagged_species.csv`, `genus_expansion_species.csv`) of both examples (`Scripts/output/its/` and `Scripts/output/coi/`), and the decision files `taxonomy_decisions_its.csv` and `taxonomy_decisions_coi.csv`.
 
 Not tracked (see [`.gitignore`](.gitignore)): the ALA data (cited by DOI), the APC/AFD authority CSVs and the raw ALA species-index download, the SQLite databases, the `_targets/` store, `Scripts/data/derived/` (intermediates and caches), the review backups, `Scripts/config/secrets.env` with the NCBI API key, and Excel lock files.
 
@@ -651,8 +651,8 @@ ALA/
 │   ├── workflow_helpers/              (helpers_*.R functions; helpers_authority_files.R = version pinning)
 │   ├── analysis/05_filtering_summary.Rmd
 │   ├── data/manual/                   (taxonomy_decisions*.csv, fern_lycophyte_genera.txt)
-│   ├── data/derived/                  (intermediates and caches, not tracked; coi/ for Example 2)
-│   └── output/                        (crabs/, audit/, reports/; coi/ for Example 2)
+│   ├── data/derived/                  (not tracked: its/ and coi/ intermediates, shared caches)
+│   └── output/                        (its/ and coi/, each with crabs/, audit/, reports/)
 └── _targets/                          (targets store, not tracked)
 ```
 
@@ -673,7 +673,7 @@ The ALA occurrence data are licensed by their providers, mostly CC-BY.
   - `Scripts/prepare_afd_from_ala.R`: arthropod AFD names and synonyms from the ALA species index (the AFD website exports at most 1,000 taxa). `Scripts/prepare_apc.R`: the APC Taxon export by script (no manual download needed).
   - Authority versions pinned by tracking files `<file>_download_info.txt` in Git (md5 and structure); `tar_make()` stops if the authority file does not match; `--update` takes a newer version only if its structure is unchanged (`helpers_authority_files.R`).
   - Report folder configurable (`output.report_dir`); the report reads all paths from `output:` instead of fixed paths.
-  - `.gitignore` tracks the final outputs of Example 2 under `Scripts/output/coi/`.
+  - Each example has its own folders: Example 1 moved to `Scripts/data/derived/its/`, `Scripts/output/its/` and `taxonomy_decisions_its.csv` (was `Scripts/data/derived/`, `Scripts/output/`, `taxonomy_decisions.csv`); Example 2 uses `coi/` and `taxonomy_decisions_coi.csv`. `.gitignore` tracks the final outputs of both.
   - COI query tested on NCBI Nucleotide. README: setup from Git on another machine, Example 2 data, settings and citations.
   - Fixes: a missing decision file (first run of a new example) no longer stops `validated_decisions` (`lapply(required, character)` in `helpers_validation.R` and `helpers_taxonomy.R`); `read_afd()` reads UTF-8 files as UTF-8 and removes control characters from name parts.
 - **1.0.4 (2026-11-25)**: genus expansion, Australian fauna (AFD) support, config cleanup; first published version.

@@ -11,7 +11,7 @@
 #
 # Run from the project root (the ALA folder):
 #   targets::tar_make(script = "Scripts/_targets.R")
-# Stop at the manual-review pause (writes Scripts/output/audit/review_queue.csv):
+# Stop at the manual-review pause (writes the review sheet output.review_queue_export):
 #   targets::tar_make(names = validated_decisions, script = "Scripts/_targets.R")
 #
 # All settings are in Scripts/config/ala_crabs.yml; output paths are under
@@ -162,8 +162,8 @@ list(
   ),
 
   # ---- Manual review (the pause) ------------------------------------------
-  # Checks taxonomy_decisions.csv against the queue and writes the review sheet
-  # Scripts/output/audit/review_queue.csv (all review candidates, blank decision
+  # Checks the decision file (taxonomy.manual_decisions) against the queue and writes the review sheet
+  # output.review_queue_export (all review candidates, blank decision
   # columns; a backup is kept first if it contains typed decisions).
   tar_target(
     validated_decisions,
@@ -240,7 +240,7 @@ list(
     },
     format = "file"
   ),
-  # QC summary (Scripts/output/audit/qc_summary.csv): record, name, decision,
+  # QC summary (output.qc): record, name, decision,
   # authority, NCBI, genus-expansion, CRABS-list and region counts, one row per
   # metric with a short description (build_qc_summary() in helpers_io.R).
   tar_target(

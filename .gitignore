@@ -57,7 +57,7 @@ ALA_Records/AFD-*.csv
 Scripts/data/derived/
 
 # ---- Manual-review backups ----------------------------------------------------
-# Scripts/data/manual/taxonomy_decisions.csv and fern_lycophyte_genera.txt ARE tracked.
+# Scripts/data/manual/taxonomy_decisions_*.csv and fern_lycophyte_genera.txt ARE tracked.
 Scripts/data/manual/review_queue_backups/
 Scripts/data/manual/review_queue_MR_edits_*.csv
 Scripts/_backup_*/
@@ -66,18 +66,21 @@ Scripts/_backup_*/
 # Everything else in Scripts/output/ (reports/, run logs, review sheets,
 # old list versions such as crabs_species_list_v1.0.2.txt) is ignored.
 Scripts/output/*
-!Scripts/output/crabs/
-Scripts/output/crabs/*
-!Scripts/output/crabs/crabs_species_list.txt
-!Scripts/output/audit/
-Scripts/output/audit/*
-!Scripts/output/audit/exclusions.csv
-!Scripts/output/audit/qc_summary.csv
-!Scripts/output/audit/region_flagged_species.csv
-!Scripts/output/audit/genus_expansion_species.csv
-!Scripts/output/audit/ncbi_unmatched.csv
-# Example 2 (COI, ala_crabs_coi_arthropods.yml) writes to Scripts/output/coi/;
-# the same small final files are tracked.
+# Example 1 (ITS, ala_crabs_its_plants.yml) writes to Scripts/output/its/,
+# Example 2 (COI, ala_crabs_coi_arthropods.yml) to Scripts/output/coi/;
+# the same small final files are tracked for both.
+!Scripts/output/its/
+Scripts/output/its/*
+!Scripts/output/its/crabs/
+Scripts/output/its/crabs/*
+!Scripts/output/its/crabs/crabs_species_list.txt
+!Scripts/output/its/audit/
+Scripts/output/its/audit/*
+!Scripts/output/its/audit/exclusions.csv
+!Scripts/output/its/audit/qc_summary.csv
+!Scripts/output/its/audit/region_flagged_species.csv
+!Scripts/output/its/audit/genus_expansion_species.csv
+!Scripts/output/its/audit/ncbi_unmatched.csv
 !Scripts/output/coi/
 Scripts/output/coi/*
 !Scripts/output/coi/crabs/
