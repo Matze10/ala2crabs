@@ -145,17 +145,26 @@ read_authority <- function(path, config) {
 # NAME_TYPE ("Valid Name" = accepted; other types such as "Synonym" or
 # "Generic Combination" are synonyms), RANK (Species / Subspecies), TAXON_GUID
 # (shared by a valid name and its synonyms; used as authority_taxon_id) and
-# NAME_LAST_UPDATE / TAXON_LAST_UPDATE (version). The file is Latin-1 encoded.
+# NAME_LAST_UPDATE / TAXON_LAST_UPDATE (version). The AFD website export is
+# Latin-1, the file of Scripts/prepare_afd_from_ala.R is UTF-8: a file that is
+# valid UTF-8 throughout is read as UTF-8, any other as Latin-1.
 # Same contract as read_apc(). The AFD checklist has no distribution column, so
 # the species table has no state codes: unless a DISTRIBUTION or STATES column
 # is present (comma-separated, codes mapped as in afd_state_code()), the genus
 # expansion has nothing to filter by and is skipped for AFD.
 read_afd <- function(path) {
-  afd <- data.table::fread(path, colClasses = "character", na.strings = "", encoding = "Latin-1")
+  enc <- if (all(validUTF8(readLines(path, warn = FALSE)))) "UTF-8" else "Latin-1"
+  afd <- data.table::fread(path, colClasses = "character", na.strings = "", encoding = enc)
   need <- c("GENUS", "SPECIES", "NAME_TYPE", "RANK", "TAXON_GUID")
   miss <- setdiff(need, names(afd))
   if (length(miss)) stop("AFD file is missing columns: ", paste(miss, collapse = ", "), " (", path, ")")
   if (!"SUBSPECIES" %in% names(afd)) afd[, SUBSPECIES := NA_character_]
+  # Control characters in name parts (e.g. "Brancuporus\x12" in the ALA
+  # species index of 2026-11-28) would stop the names from matching.
+  for (j in c("GENUS", "SPECIES", "SUBSPECIES")) {
+    data.table::set(afd, j = j, value = trimws(gsub("[[:cntrl:]]", "", afd[[j]])))
+    data.table::set(afd, i = which(afd[[j]] == ""), j = j, value = NA_character_)
+  }
   afd <- afd[!is.na(GENUS) & !is.na(SPECIES) & RANK %chin% c("Species", "Subspecies")]
   afd[, canonical_name := trimws(paste(GENUS, SPECIES, data.table::fifelse(is.na(SUBSPECIES), "", SUBSPECIES)))]
   afd[, accepted := NAME_TYPE == "Valid Name"]

@@ -11,7 +11,7 @@ This folder holds:
 - the name authority CSV (set `taxonomy.authority_file`):
   - Example 1: `APC-taxon-2026-11-22-4420.csv`, downloaded by hand on 2026-11-22; `Scripts/prepare_apc.R` checks it against its tracking file, and `--update` gets a newer export;
   - Example 2: `AFD-ALA-arthropoda-20261128.csv`, built by `Scripts/prepare_afd_from_ala.R` from the ALA species index (raw download `AFD-ALA-arthropoda-20261128/bie_download.csv`);
-  - `AFD-20261125T151017.csv`: AFD website export of Vespidae (used to check the reader; not used by the examples).
+  - (`AFD-20261125T151017.csv`, an AFD website export of Vespidae, was used to check the reader and the Example 2 file; it is not used by the examples and not kept.)
 
 Each authority CSV has a tracking file `<file>_download_info.txt` (source URL, download time, MD5 checksum, row count, structure) that pins its version; see [Version pinning](../README.md#version-pinning-tracking-files).
 

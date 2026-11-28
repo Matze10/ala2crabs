@@ -28,7 +28,7 @@ read_manual_decisions <- function(config) {
   )
   if (!file.exists(path) || file.info(path)$size == 0) {
     return(data.table::as.data.table(setNames(
-      lapply(required, character), required
+      lapply(required, function(x) character()), required  # empty columns, no decision file yet
     )))
   }
   decisions <- data.table::fread(path, na.strings = c("", "NA"))

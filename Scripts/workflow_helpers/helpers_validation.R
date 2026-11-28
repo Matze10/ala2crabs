@@ -4,7 +4,9 @@ validate_manual_decisions <- function(review_file, decision_file, output_file, l
   review <- data.table::fread(review_file)
   required <- c("normalised_name", "accepted_name", "accepted_rank", "decision", "reason", "authority", "authority_version")
   if (!file.exists(decision_file) || file.info(decision_file)$size == 0) {
-    decisions <- data.table::as.data.table(setNames(lapply(required, character), required))
+    # No decision file yet (e.g. first run of a new example): empty table.
+    # (lapply(required, character) would call character("<name>") -> error.)
+    decisions <- data.table::as.data.table(setNames(lapply(required, function(x) character()), required))
   } else {
     decisions <- data.table::fread(decision_file, na.strings = c("", "NA"))
     missing <- setdiff(required, names(decisions))
