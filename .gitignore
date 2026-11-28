@@ -76,6 +76,20 @@ Scripts/output/audit/*
 !Scripts/output/audit/region_flagged_species.csv
 !Scripts/output/audit/genus_expansion_species.csv
 !Scripts/output/audit/ncbi_unmatched.csv
+# Example 2 (COI, ala_crabs_coi_arthropods.yml) writes to Scripts/output/coi/;
+# the same small final files are tracked.
+!Scripts/output/coi/
+Scripts/output/coi/*
+!Scripts/output/coi/crabs/
+Scripts/output/coi/crabs/*
+!Scripts/output/coi/crabs/crabs_species_list.txt
+!Scripts/output/coi/audit/
+Scripts/output/coi/audit/*
+!Scripts/output/coi/audit/exclusions.csv
+!Scripts/output/coi/audit/qc_summary.csv
+!Scripts/output/coi/audit/region_flagged_species.csv
+!Scripts/output/coi/audit/genus_expansion_species.csv
+!Scripts/output/coi/audit/ncbi_unmatched.csv
 docs/
 
 # ---- Temporary, backup, Office and operating-system files ---------------------

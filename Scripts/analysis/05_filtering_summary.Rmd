@@ -8,8 +8,10 @@ library(data.table)
 library(DBI)
 library(RSQLite)
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
-config <- yaml::read_yaml("../config/ala_crabs.yml")
-database <- "../data/derived/ala_raw.sqlite"
+config <- yaml::read_yaml(here::here("Scripts/config/ala_crabs.yml"))
+# All file paths come from the output: block of the active config.
+out <- function(key) here::here(config$output[[key]])
+database <- out("database")
 ```
 
 # Purpose
@@ -37,10 +39,10 @@ count_rows <- function(path, chunk = 64 * 1024^2) {
   repeat { b <- readBin(con, "raw", chunk); if (!length(b)) break; n <- n + sum(b == as.raw(10L)) }
   n - 1  # minus header
 }
-target_rows <- count_rows("../data/derived/target_occurrences.csv")
-candidates <- fread("../data/derived/name_candidates.csv")
-normalised <- fread("../data/derived/name_candidates_normalised.csv")
-review <- fread("../data/derived/taxonomy_review_queue.csv")
+target_rows <- count_rows(out("target_records"))
+candidates <- fread(out("candidates"))
+normalised <- fread(out("normalised_names"))
+review <- fread(out("review_queue"))
 
 data.table(
   stage = c("Raw records", "Target records", "Candidate observations", "Normalised names", "Review queue names"),
@@ -61,7 +63,7 @@ The target filter retains species and infraspecific ranks and conservatively exc
 # Manual decisions
 
 ```{r decisions}
-matches <- fread("../data/derived/taxonomy_matches.csv", na.strings=c("", "NA"))
+matches <- fread(out("taxonomy_matches"), na.strings=c("", "NA"))
 matches[, .N, by=decision][order(decision)]
 ```
 
@@ -70,8 +72,8 @@ matches[, .N, by=decision][order(decision)]
 Each region in `geography.region_flags` is a latitude/longitude box. A species is flagged for a region when all its georeferenced records lie inside the box (e.g. `fnq_only`: every record north of Cairns). Flagged species stay in the CRABS list unless the region has `exclude: true`; a hit on one should be checked before it is trusted.
 
 ```{r regions}
-flags_file <- "../data/derived/species_latitude_flags.csv"
-region_file <- "../output/audit/region_flagged_species.csv"
+flags_file <- out("latitude_flags")
+region_file <- out("region_flagged_species")
 if (file.exists(flags_file)) {
   flags <- fread(flags_file)
   regions <- sub("^n_inside_", "", grep("^n_inside_", names(flags), value = TRUE))
@@ -91,11 +93,11 @@ if (file.exists(flags_file)) {
 # Entrez and CRABS output
 
 ```{r final}
-entrez_file <- "../data/derived/entrez_marker_checks.csv"
+entrez_file <- out("entrez_checks")
 entrez <- fread(entrez_file)
 if ("ncbi_its_hits" %in% names(entrez)) setnames(entrez, "ncbi_its_hits", "ncbi_marker_hits")
-crabs <- readLines("../output/crabs/crabs_species_list.txt", warn = FALSE)
-exclusions <- fread("../output/audit/exclusions.csv")
+crabs <- readLines(out("crabs_species_list"), warn = FALSE)
+exclusions <- fread(out("exclusions"))
 
 list(
   reviewed_species_checked = nrow(entrez),

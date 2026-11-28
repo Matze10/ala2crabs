@@ -25,6 +25,7 @@ source("Scripts/workflow_helpers/helpers_canonical_names.R") # name parser: auth
 source("Scripts/workflow_helpers/helpers_names.R")           # candidate-name extraction and review flags
 source("Scripts/workflow_helpers/helpers_taxonomy.R")        # review queue, automatic proposals, applying decisions
 source("Scripts/workflow_helpers/helpers_synonyms.R")        # APC/AFD accepted names and NCBI names per canonical name
+source("Scripts/workflow_helpers/helpers_authority_files.R") # authority CSV version pinning (tracking files)
 source("Scripts/workflow_helpers/helpers_validation.R")      # decision-file checks, review sheet
 source("Scripts/workflow_helpers/helpers_entrez.R")          # NCBI taxonomy and marker sequence counts (cached)
 source("Scripts/workflow_helpers/helpers_ala.R")             # ALA name-matching genus check for ferns/lycophytes
@@ -145,7 +146,8 @@ list(
   ),
 
   # ---- Name authority and NCBI names ----------------------------------------
-  # The authority CSV (APC for plants, AFD for animals) is a manual download,
+  # The authority CSV (APC for plants, AFD for animals) is made beforehand with
+  # Scripts/prepare_apc.R or Scripts/prepare_afd_from_ala.R,
   # path in taxonomy.authority_file (see README.md). The NCBI
   # taxonomy dump is downloaded once. Every canonical name gets its accepted
   # name and the NCBI name used in the CRABS list; no NCBI match -> audit file.
@@ -233,7 +235,8 @@ list(
     filtering_report,
     {
       crabs_outputs
-      render_report("Scripts/analysis/05_filtering_summary.Rmd", "Scripts/output/reports")
+      render_report("Scripts/analysis/05_filtering_summary.Rmd",
+                    here::here(config$output$report_dir %||% "Scripts/output/reports"))
     },
     format = "file"
   ),

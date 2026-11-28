@@ -1,0 +1,10 @@
+url: https://biodiversity.org.au/nsl/services/export/index (APC Taxon, downloaded by hand in a browser; same file as .../export/taxonCsv)
+downloaded: 2026-11-22 (file time 15:44 AEST)
+file: APC-taxon-2026-11-22-4420.csv
+md5: 349d057762e7487fc5453c50481d8995
+columns: taxonID, nameType, acceptedNameUsageID, acceptedNameUsage, nomenclaturalStatus, nomIlleg, nomInval, taxonomicStatus, proParte, scientificName, scientificNameID, canonicalName, scientificNameAuthorship, parentNameUsageID, taxonRank, taxonRankSortOrder, kingdom, class, subclass, family, taxonConceptID, nameAccordingTo, nameAccordingToID, taxonRemarks, taxonDistribution, higherClassification, firstHybridParentName, firstHybridParentNameID, secondHybridParentName, secondHybridParentNameID, nomenclaturalCode, created, modified, datasetName, dataSetID, license, ccAttributionIRI
+values_taxonomicStatus: accepted | alternative name | basionym | doubtful misapplied | doubtful nomenclatural synonym | doubtful pro parte misapplied | doubtful pro parte taxonomic synonym | doubtful taxonomic synonym | excluded | misapplied | nomenclatural synonym | orthographic variant | pro parte misapplied | pro parte nomenclatural synonym | pro parte taxonomic synonym | replaced synonym | taxonomic synonym | unsourced misapplied | unsourced pro parte misapplied
+values_taxonRank: [unranked] | Class | Division | Family | Form | Genus | Kingdom | Nothovariety | Order | Section | Series | Species | Subclass | Subform | Subgenus | Suborder | Subsection | Subseries | Subspecies | Subvariety | Superorder | Superspecies | Variety
+values_nameType: autonym | cultivar | hybrid formula parents known | intergrade | named hybrid | named hybrid autonym | phrase name | scientific
+rows: 114021
+used by: Example 1 (ala_crabs_its_plants.yml), APC version 2026-11-17

@@ -14,8 +14,8 @@
 #      the NCBI scientific name of that taxid becomes the CRABS name, because
 #      CRABS queries NCBI with "<name>"[Organism].
 #
-# Inputs (config$taxonomy): authority, authority_file (manual download, see
-# ALA_Records/README.md), taxon.ncbi_root_taxid (helpers_io.R),
+# Inputs (config$taxonomy): authority, authority_file (made with
+# Scripts/prepare_apc.R or prepare_afd_from_ala.R), taxon.ncbi_root_taxid (helpers_io.R),
 # ncbi_taxdump_dir (taxdump.tar.gz downloaded once into this folder).
 # Base R + data.table only.
 
@@ -109,7 +109,8 @@ authority_input <- function(config) {
   if (authority_name(config) == "NONE") return(here::here("Scripts/config/ala_crabs.yml"))
   path <- here::here(config$taxonomy$authority_file)
   if (!file.exists(path)) stop("taxonomy.authority_file not found: ", path,
-                               ". Download it by hand, see 'Name authority file' in README.md.")
+                               ". Make it with Scripts/prepare_apc.R (APC) or Scripts/prepare_afd_from_ala.R (AFD), see 'Name authority file' in README.md.")
+  check_pinned_md5(path)  # helpers_authority_files.R: version pinned by its tracking file
   path
 }
 

@@ -1,0 +1,11 @@
+url: https://bie-ws.ala.org.au/ws/download?q=*&fq=idxtype:TAXON&fq=rk_phylum:ARTHROPODA&fq=-rk_subphylum:CRUSTACEA&fq=rank:(species%20OR%20subspecies)
+downloaded: 2026-11-28 13:58:47 AEST
+raw_file: AFD-ALA-arthropoda-20261128/bie_download.csv
+raw_md5: eb00fbbb7dec2a13c79d360af3e38cf0
+raw_columns: taxonID, taxonRank, scientificName, scientificNameAuthorship, taxonomicStatus, datasetName, parentGuid, type, additionalNames, unrankedID, unranked, informalID, informal, speciesID, species, species_groupID, species_group, subgenusID, subgenus, genusID, genus, genus_groupID, genus_group, subtribeID, subtribe, tribeID, tribe, supertribeID, supertribe, subfamilyID, subfamily, familyID, family, superfamilyID, superfamily, infraorderID, infraorder, suborderID, suborder, orderID, order, superorderID, superorder, infraclassID, infraclass, subclassID, subclass, classID, class, subphylumID, subphylum, phylumID, phylum, kingdomID, kingdom
+raw_values_taxonRank: species | subspecies
+raw_values_taxonomicStatus: accepted | inferredAccepted
+raw_rows: 84311
+file: AFD-ALA-arthropoda-20261128.csv
+md5: fe8d7f1aa9d0993963bf909f0315f110
+rows: 142853

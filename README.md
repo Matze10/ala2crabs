@@ -8,7 +8,7 @@ Version 1.0.4 (2026-11-25). See [Version history](#version-history).
 
 This pipeline turns an Atlas of Living Australia (ALA) occurrence download into a reviewed species list for a CRABS (Creating Reference databases for Amplicon-Based Sequencing) reference database. It filters the records to the taxon you configure, cleans and canonicalises the names, resolves synonyms against a national name authority and NCBI Taxonomy, sends only doubtful names to manual review, counts the NCBI sequences of your barcode marker for every species, and writes one species per line in the spelling CRABS needs. Taxon, marker, filters and region flags are all set in one YAML file.
 
-It works for **Australian flora and fauna**: plants are resolved against the Australian Plant Census (APC, ALA kingdom Plantae, e.g. ITS, rbcL, matK), animals against the Australian Faunal Directory (AFD, ALA kingdom Animalia, e.g. COI). The same code runs for both; only the `taxon:`, `taxonomy:` and `marker:` settings change ([Name authority file](#name-authority-file-apc-or-afd-manual-download-required)). The worked example in this repository is a pollen ITS list of NSW and Queensland seed plants ([Example 1](#example-1-pollen-its-list-for-nsw-and-qld-seed-plants)). The fauna setup is shown in [Example 2](#example-2-coi-for-australian-fauna): the AFD reader, name matching and genus expansion are tested on an AFD Vespidae checklist, but a full fauna run to a CRABS list has not been done yet.
+It works for **Australian flora and fauna**: plants are resolved against the Australian Plant Census (APC, ALA kingdom Plantae, e.g. ITS, rbcL, matK), animals against the Australian Faunal Directory (AFD, ALA kingdom Animalia, e.g. COI). The same code runs for both; only the `taxon:`, `taxonomy:` and `marker:` settings change ([Name authority file](#name-authority-file-apc-or-afd)). The repository has two worked examples, each with its own config file: a pollen ITS list of NSW and Queensland seed plants ([Example 1](#example-1-pollen-its-list-for-nsw-and-qld-seed-plants), `Scripts/config/ala_crabs_its_plants.yml`) and a COI list of NSW and Queensland arthropods without crustaceans ([Example 2](#example-2-coi-list-for-nsw-and-qld-arthropods-without-crustaceans), `Scripts/config/ala_crabs_coi_arthropods.yml`). The pipeline always reads `Scripts/config/ala_crabs.yml`, so the example to run is copied to that name ([Config file](#config-file-the-active-config-must-be-named-ala_crabsyml)).
 
 All commands are run from the project root, the folder that contains this README, `Scripts/` and `renv.lock`.
 
@@ -20,11 +20,18 @@ All commands are run from the project root, the folder that contains this README
    renv::restore()
    ```
 
-2. Put your ALA download into `ALA_Records/`: one ZIP with the occurrence CSVs, e.g. `ALA_Records/plant_ala_records-2026-11-21/records-2026-11-21.zip`. Set `input.combined_zip` to its path and list the CSV names in `input.expected_members` in [`Scripts/config/ala_crabs.yml`](Scripts/config/ala_crabs.yml). To reproduce the example, download the two datasets from their DOIs ([Example 1](#example-1-pollen-its-list-for-nsw-and-qld-seed-plants)). The data are not in this repository.
-3. Download the name authority file by hand (APC for plants, AFD for fauna) and set `taxonomy.authority_file`; see [Name authority file](#name-authority-file-apc-or-afd-manual-download-required). For a group without an Australian authority, set `taxonomy.authority: none`.
-4. Check the `marker:` and `taxon:` blocks in the config ([Configuration](#configuration)).
-5. Copy `Scripts/config/secrets.env.example` to `Scripts/config/secrets.env` and fill in `NCBI_EMAIL` and `NCBI_API_KEY`.
-6. Run the pipeline. In R:
+2. Choose the config. The pipeline reads only `Scripts/config/ala_crabs.yml`. Copy an example to that name, e.g. for the arthropod COI example:
+
+   ```r
+   file.copy("Scripts/config/ala_crabs_coi_arthropods.yml", "Scripts/config/ala_crabs.yml", overwrite = TRUE)
+   ```
+
+   See [Config file](#config-file-the-active-config-must-be-named-ala_crabsyml).
+3. Put your ALA download into `ALA_Records/`: one ZIP with the occurrence CSVs, e.g. `ALA_Records/plant_ala_records-2026-11-21/records-2026-11-21.zip`. Set `input.combined_zip` to its path and list the CSV names in `input.expected_members` in `Scripts/config/ala_crabs.yml`. To reproduce an example, download its datasets from their DOIs ([Example 1](#example-1-pollen-its-list-for-nsw-and-qld-seed-plants), [Example 2](#example-2-coi-list-for-nsw-and-qld-arthropods-without-crustaceans)). The data are not in this repository.
+4. Get the name authority file and set `taxonomy.authority_file`: `Scripts/prepare_apc.R` downloads the APC for plants, `Scripts/prepare_afd_from_ala.R` builds the AFD for arthropods. See [Name authority file](#name-authority-file-apc-or-afd). For a group without an Australian authority, set `taxonomy.authority: none`.
+5. Check the `marker:` and `taxon:` blocks in the config ([Configuration](#configuration)).
+6. Copy `Scripts/config/secrets.env.example` to `Scripts/config/secrets.env` and fill in `NCBI_EMAIL` and `NCBI_API_KEY`.
+7. Run the pipeline. In R:
 
    ```r
    targets::tar_make(script = "Scripts/_targets.R")
@@ -77,6 +84,25 @@ config
 ## Configuration
 
 All settings are in [`Scripts/config/ala_crabs.yml`](Scripts/config/ala_crabs.yml), in the blocks below (in file order). Steps that only make sense for plants are marked; for another group they are replaced or emptied ([Plant-specific steps](#plant-specific-steps)).
+
+### Config file: the active config must be named `ala_crabs.yml`
+
+**The pipeline reads only `Scripts/config/ala_crabs.yml`.** The file name is fixed in `Scripts/_targets.R` (target `config_file`), in the report `Scripts/analysis/05_filtering_summary.Rmd` and in `authority_input()`; a config under any other name is ignored. The examples are kept under their own names and copied to `ala_crabs.yml` to run them:
+
+| File | What it is |
+|---|---|
+| `Scripts/config/ala_crabs.yml` | **The active config**: the one `tar_make()` runs. Currently a copy of Example 2. |
+| [`Scripts/config/ala_crabs_its_plants.yml`](Scripts/config/ala_crabs_its_plants.yml) | [Example 1](#example-1-pollen-its-list-for-nsw-and-qld-seed-plants): ITS, NSW and QLD seed plants. |
+| [`Scripts/config/ala_crabs_coi_arthropods.yml`](Scripts/config/ala_crabs_coi_arthropods.yml) | [Example 2](#example-2-coi-list-for-nsw-and-qld-arthropods-without-crustaceans): COI, NSW and QLD arthropods without crustaceans. |
+
+To switch, copy the example over `ala_crabs.yml`:
+
+```r
+file.copy("Scripts/config/ala_crabs_its_plants.yml", "Scripts/config/ala_crabs.yml", overwrite = TRUE)      # Example 1
+file.copy("Scripts/config/ala_crabs_coi_arthropods.yml", "Scripts/config/ala_crabs.yml", overwrite = TRUE)  # Example 2
+```
+
+If you change settings for a run, make the change in the example file as well (or save your own copy under a new name), so the active config can always be restored from a named file. The two examples write to different `output:` paths (Example 2 under `Scripts/data/derived/coi/` and `Scripts/output/coi/`), so switching does not overwrite the other example's results. There is one `targets` store (`_targets/`) for both: after a switch, `tar_make()` reruns every step for the new config.
 
 ### `project`
 
@@ -162,7 +188,7 @@ For another group, set `exclude_phyla`, `exclude_classes`, `exclude_orders` and 
 
 | Key | What it does |
 |---|---|
-| `authority`, `authority_file` | Name authority: `APC`, `AFD` or `none`, and the path of its manually downloaded CSV ([Name authority file](#name-authority-file-apc-or-afd-manual-download-required)). |
+| `authority`, `authority_file` | Name authority: `APC`, `AFD` or `none`, and the path of its manually downloaded CSV ([Name authority file](#name-authority-file-apc-or-afd)). |
 | `manual_decisions` | `Scripts/data/manual/taxonomy_decisions.csv` ([Manual review](#manual-review)). |
 | `secrets_file` | `Scripts/config/secrets.env` with `NCBI_EMAIL` and `NCBI_API_KEY`. |
 | `request_interval_seconds` | Pause between NCBI requests per worker. |
@@ -267,11 +293,16 @@ Expanded species have no ALA records of their own, so they get no region flags; 
 
 ### `output`
 
-Paths of all derived files and outputs. The defaults keep intermediates in `Scripts/data/derived/` (not tracked) and the final files in `Scripts/output/`.
+Paths of all derived files and outputs, including the report folder (`report_dir`, default `Scripts/output/reports`). The code and the report take every path from this block. Example 1 keeps intermediates in `Scripts/data/derived/` (not tracked) and the final files in `Scripts/output/`; Example 2 uses `Scripts/data/derived/coi/` and `Scripts/output/coi/`. The paths in [Outputs](#outputs) are those of Example 1.
 
-## Name authority file (APC or AFD): manual download required
+## Name authority file (APC or AFD)
 
-The pipeline checks every name against a national name authority and replaces synonyms with the accepted name before matching to NCBI. The authority file is not part of the ALA download and is not fetched by the pipeline: biodiversity.org.au blocks scripted downloads with a "human verification" page, so download it by hand in a browser. `tar_make()` stops with an error if the file is missing.
+The pipeline checks every name against a national name authority and replaces synonyms with the accepted name before matching to NCBI. The authority file is not part of the ALA download and is not fetched by `tar_make()`. It is made with a script, and its version is **pinned**: a new version changes the results, so it is only used after a deliberate update that is committed to Git.
+
+| Authority | Script | Pinned file (example) |
+|---|---|---|
+| APC (plants, Example 1) | [`Scripts/prepare_apc.R`](Scripts/prepare_apc.R) | `ALA_Records/APC-taxon-2026-11-22-4420.csv` |
+| AFD (arthropods without crustaceans, Example 2) | [`Scripts/prepare_afd_from_ala.R`](Scripts/prepare_afd_from_ala.R) | `ALA_Records/AFD-ALA-arthropoda-20261128.csv` |
 
 | Taxon group | `taxonomy.authority` | Source | `taxon.ncbi_root_taxid` |
 |---|---|---|---|
@@ -279,24 +310,52 @@ The pipeline checks every name against a national name authority and replaces sy
 | Animals (e.g. COI) | `AFD` | Australian Faunal Directory | `33208` (animals) or `6656` (arthropods) |
 | Anything, without an Australian authority | `none` | ALA names go straight to NCBI | as above |
 
+### Version pinning: tracking files
+
+The version in use is the file in `taxonomy.authority_file` of the config. Next to it is its **tracking file** `<file>_download_info.txt`, which is tracked in Git (the large CSVs are not). It holds the source URL, the download time, the **MD5 checksum** and row count, and the **structure** of the file: its column names and the values of the columns the readers depend on (`values_taxonomicStatus`, `values_taxonRank`, ...; for the AFD file also of the raw ALA download, `raw_*`). The functions are in [`helpers_authority_files.R`](Scripts/workflow_helpers/helpers_authority_files.R).
+
+- **`tar_make()`** checks the authority file against the `md5` of its tracking file and stops if they differ (`check_pinned_md5()`), so a run can only use the pinned version.
+- **The scripts without options never change the version.** If the pinned file is there and matches, they report `ok`. If it is missing, they download the current file and keep it only if its checksum equals the pinned one (the AFD file is rebuilt from its raw download if that is still there). Both servers only provide the current version, so once it has changed upstream the pinned file cannot be downloaded again: copy it from the machine that made it.
+- **`--update`** downloads the current file and compares its structure with the pinned version. If the structure is the same, it writes the new file under a new name with its tracking file and sets `taxonomy.authority_file` in the example config (and in `ala_crabs.yml` if that pointed to the same file). If the structure differs, it stops, lists the differences, and changes nothing; then check the reader (`read_apc()` / `read_afd()`) against the new file first.
+
+To update the authority and share it:
+
+```r
+# on the machine that updates (example: APC)
+#   Rscript Scripts/prepare_apc.R --update
+# then commit the changed config(s) and the new tracking file, e.g.
+#   git add Scripts/config/ala_crabs_its_plants.yml ALA_Records/APC-taxon-<date>-<n>_download_info.txt
+#   git commit -m "APC version <date>"; git push
+# on another machine
+#   git pull
+#   Rscript Scripts/prepare_apc.R      # fetches the same file if the server still has it, else copy it
+```
+
+An update reruns the name matching and everything after it.
+
 ### Plants: Australian Plant Census (APC)
 
-1. Open <https://biodiversity.org.au/nsl/services/export/index> in a browser (solve the check if one appears).
-2. Under the APC exports, download **APC Taxon** (CSV, about 100 MB).
-3. Save it in `ALA_Records/` without renaming, e.g. `ALA_Records/APC-taxon-2026-11-22-4420.csv`. The date in the file name is the download date; the APC version is taken from the file's `modified` column and written to `authority_version`.
-4. Point the config at it:
+`Rscript Scripts/prepare_apc.R` (or `source("Scripts/prepare_apc.R")`) checks or restores the pinned **APC Taxon** export (CSV, about 100 MB, 114,000 rows); `--update` gets the current one. It downloads <https://biodiversity.org.au/nsl/services/export/taxonCsv>, the same file as the "APC Taxon" link on <https://biodiversity.org.au/nsl/services/export/index>, and saves it under the server's file name, e.g. `APC-taxon-2026-11-28-1134.csv` (download date and time). If the site answers with its human-verification page instead of the CSV, the script stops; then download **APC Taxon** by hand from the export page, save it in `ALA_Records/` without renaming, and write its tracking file with `write_download_info()` (as was done for the Example 1 file, downloaded by hand on 2026-11-22). The APC version is taken from the file's `modified` column and written to `authority_version` (Example 1: APC 2026-11-17).
 
-   ```yaml
-   taxonomy:
-     authority: APC
-     authority_file: ALA_Records/APC-taxon-2026-11-22-4420.csv
-   ```
+```yaml
+taxonomy:
+  authority: APC
+  authority_file: ALA_Records/APC-taxon-2026-11-22-4420.csv
+```
+
+Structure compared on `--update`: column names and the values of `taxonomicStatus`, `taxonRank` and `nameType`.
 
 ### Animals: Australian Faunal Directory (AFD)
 
-1. Open the AFD page of the group, e.g. <https://biodiversity.org.au/afd/taxa/VESPIDAE>, in a browser.
-2. Download the group's checklist as CSV (a file like `AFD-20261125T151017.csv`) and save it in `ALA_Records/` without renaming.
-3. Set `taxonomy.authority: AFD` and `taxonomy.authority_file` to that file, and `taxon.ncbi_root_taxid` to the animal subtree (33208 animals, 6656 arthropods).
+The AFD website exports at most **1,000 taxa per download** ("Bulk data limit exceeded" above that), so it only works for small groups. Arthropoda has about 120,000 taxa.
+
+**Small group (up to 1,000 taxa), from the AFD website:** open the AFD page of the group, e.g. <https://biodiversity.org.au/afd/taxa/VESPIDAE>, download the group's checklist as CSV (a file like `AFD-20261125T151017.csv`), save it in `ALA_Records/` without renaming, and set `taxonomy.authority: AFD`, `taxonomy.authority_file` and `taxon.ncbi_root_taxid` (33208 animals, 6656 arthropods). Such a file has no tracking file unless you write one; `tar_make()` then warns that its version is not pinned.
+
+**Arthropods without crustaceans (Example 2), from the ALA species index:** ALA builds its animal taxonomy from the current AFD; every taxon carries its AFD GUID, the AFD classification and its AFD synonyms. `Rscript Scripts/prepare_afd_from_ala.R` (or `source(...)`) checks or rebuilds the pinned file; `--update` gets the current index. It downloads
+`https://bie-ws.ala.org.au/ws/download?q=*&fq=idxtype:TAXON&fq=rk_phylum:ARTHROPODA&fq=-rk_subphylum:CRUSTACEA&fq=rank:(species OR subspecies)`
+into `ALA_Records/AFD-ALA-arthropoda-<YYYYMMDD>/bie_download.csv` and converts it to the AFD checklist format in `AFD-ALA-arthropoda-<YYYYMMDD>.csv`; the conversion is deterministic, so the same raw download always gives the same file (same md5). Only rows with `datasetName` `AFD` are kept: ALA's own additions (lists "Taxonomic Additions - ... 2025", 1,396 names, e.g. exotic biosecurity species) are dropped. Synonyms come from the ALA field `additionalNames`. The pinned download of 2026-11-28 gave 82,915 accepted AFD names (81,069 species, 1,846 subspecies; Insecta 72,486, Arachnida 8,598, the rest Diplopoda, Pycnogonida, Collembola, Chilopoda, Pauropoda, Entognatha, Symphyla) and 59,938 synonyms. All 239 names of the AFD website export for Vespidae (`AFD-20261125T151017.csv`) are in it with the same accepted names. Structure compared on `--update`: the raw download's column names and the values of `taxonRank` and `taxonomicStatus`.
+
+Not suitable: the AFD copy on ChecklistBank (dataset 127379, version 2022-10-12) lacks whole groups, e.g. Vespidae.
 
 The reader (`read_afd()` in `helpers_synonyms.R`) uses the columns `GENUS`, `SPECIES`, `SUBSPECIES` (canonical name without subgenus and authors), `NAME_TYPE` (`Valid Name` = accepted; other types, e.g. synonyms, are linked to the valid name), `RANK` (Species, Subspecies), `TAXON_GUID` (shared by a valid name and its synonyms; written as `authority_taxon_id`) and `NAME_LAST_UPDATE` / `TAXON_LAST_UPDATE` (version). The file is Latin-1 encoded. The checklist export has no distribution column, so the genus expansion cannot filter AFD species by state (see `crabs.expand_genus_without_distribution`). A checklist of a whole family can contain only valid names (the Vespidae example has 239 valid names and no synonyms); then the synonym step uses the AFD accepted names and the NCBI search order as for plants. AFD state names (e.g. "New South Wales") would be mapped to the APC codes (NSW, Qld, Vic, Tas, SA, WA, NT, ACT, LHI, NI, ChI) if a distribution column is present.
 
@@ -476,7 +535,7 @@ Sizes measured for the example after the 1.0.3 and 1.0.4 runs (November 2026).
 | `Scripts/data/derived/ala_raw.sqlite` (+ `-wal`, `-shm`) | 4.5 GB + 0.9 GB (up to ~7 GB during an import) | SQLite copy of the ALA ZIP | Yes | Import (about 10 min) plus everything after it |
 | `ALA_Records/plant_ala_records-2026-11-21/records-2026-11-21.zip` | 3.0 GB | The ALA download (input) | No, unless you can download it again | Needed for any rerun |
 | `Scripts/data/derived/ncbi_taxdump/` | 530 MB | Local NCBI Taxonomy for the synonym step | Yes | Dump downloaded again (minutes) |
-| `ALA_Records/APC-taxon-*.csv` | 96 MB | APC name authority (input) | No | Manual download again |
+| `ALA_Records/APC-taxon-*.csv` | 96 MB | APC name authority (input) | No | Download again (`Scripts/prepare_apc.R`) |
 | `Scripts/data/derived/entrez_cache/` | 7 MB | NCBI marker counts per species | Keep | All names queried again (about 3 h) |
 | `Scripts/data/derived/ala_genus_cache/` | 2 MB | ALA name matching per genus | Keep | All genera checked again |
 | `_targets/` | < 1 MB | `targets` metadata; results are stored as the files above | Only to force a full rerun | Everything reruns |
@@ -485,7 +544,7 @@ The large files can all be rebuilt from the ZIP and the authority file; deleting
 
 ## Example 1: pollen ITS list for NSW and QLD seed plants
 
-This repository's configuration. Purpose: a reference list of pollen-producing seed plants for ITS pollen metabarcoding in central QLD and SEQ. All NSW and QLD records are used, and garden and cultivated records count.
+Config: [`Scripts/config/ala_crabs_its_plants.yml`](Scripts/config/ala_crabs_its_plants.yml) (copy it to `ala_crabs.yml` to run it). Purpose: a reference list of pollen-producing seed plants for ITS pollen metabarcoding in central QLD and SEQ. All NSW and QLD records are used, and garden and cultivated records count.
 
 **Data.** Two ALA occurrence downloads made on 2026-11-21 (lifeform Plants, ALA quality filters as in [`search_settings_ala.txt`](ALA_Records/plant_ala_records-2026-11-21/search_settings_ala.txt)). They are not in the repository because they are about 19 GB uncompressed (3 GB zipped):
 
@@ -508,53 +567,77 @@ The CSVs of both downloads were renamed by hand to the part names above and zipp
 
 **Results.** Final 1.0.4 run of 2026-11-25 (clean start, 2 h 24 min with the NCBI results of the stopped first attempt cached; a fully fresh run takes about 6 h): 12,119,773 raw records, 11,495,771 target records, 57,399 normalised names; **17,423 species in the CRABS list**, including 36 named hybrids and 11 phrase names that NCBI lists as taxa; 27 lines added by the genus expansion (19 APC species and 8 NCBI phrase names, see `genus_expansion_species.csv`); 3,949 names without an NCBI match; 1,199 species flagged `fnq_only` (kept); 8,987 of the 19,273 checked names with at least one ITS sequence at NCBI. No target ended with a warning or error. All numbers are in `Scripts/output/audit/qc_summary.csv`.
 
-## Example 2: COI for Australian fauna
+## Example 2: COI list for NSW and QLD arthropods without crustaceans
 
-The keys to change for a fauna (animal) COI list. The AFD reader has been tested on a Vespidae checklist (239 valid names; 3 of 19 test names matched NCBI below 6656), but the whole pipeline has not been run for animals.
+Config: [`Scripts/config/ala_crabs_coi_arthropods.yml`](Scripts/config/ala_crabs_coi_arthropods.yml) (copy it to `ala_crabs.yml` to run it). Purpose: a COI reference list of the NSW and QLD arthropods without crustaceans (insects, arachnids, myriapods, springtails, sea spiders and the other non-crustacean classes). Not yet run to a CRABS list.
+
+**Data.** Two ALA occurrence downloads made on 2026-11-28 with ALA species group **Arthropods**, one per state, with the same filters: no fossil or eDNA records, no duplicates across datasets, no cultivated or captive records, no taxon-match problems, no absence records, no records needing identification, no records before 1700, no records with open user assertions or coordinate problems (0,0, swapped or negated, state or country centroid), spatially valid only, fewer than 3 environmental outlier layers, coordinate uncertainty up to 10 km. The full query is in each metadata folder's `README.html`.
+
+| State | DOI | Download date | CSV in the ZIP | Metadata folder |
+|---|---|---|---|---|
+| NSW | [10.26197/ala.f8908ddd-bd16-4e91-9132-d6dfc692d837](https://doi.org/10.26197/ala.f8908ddd-bd16-4e91-9132-d6dfc692d837) | 2026-11-28 | `records-2026-11-28_nsw.csv` | [`records-2026-11-28_nsw_metadata/`](ALA_Records/insect_ala_records-2026-11-28/records-2026-11-28_nsw_metadata/) |
+| QLD | [10.26197/ala.fd899d05-4447-4b23-bcc5-6cf8db5d0e3d](https://doi.org/10.26197/ala.fd899d05-4447-4b23-bcc5-6cf8db5d0e3d) | 2026-11-28 | `records-2026-11-28_qld.csv` | [`records-2026-11-28_qld_metadata/`](ALA_Records/insect_ala_records-2026-11-28/records-2026-11-28_qld_metadata/) |
+
+Both CSVs are zipped together as `ALA_Records/insect_ala_records-2026-11-28/records-2026-11-28.zip` (4.5 GB uncompressed, 0.8 GB zipped). The download contains all arthropods; the crustaceans are removed by the config, not by the download. The download's classes (NSW + QLD records): Insecta 2,687,301, Arachnida 305,949, Malacostraca 140,961, Copepoda 22,688, Diplopoda 8,312, Chilopoda 6,815, Thecostraca 4,692, Collembola 4,490, Branchiopoda 4,420, Ostracoda 3,600, Pycnogonida 1,607, Symphyla 97, Ichthyostraca 71, Entognatha 22, Pauropoda 6, blank 981.
+
+**Name authority.** AFD names of the non-crustacean arthropods built from the ALA species index on 2026-11-28 (`ALA_Records/AFD-ALA-arthropoda-20261128.csv`, [AFD](#animals-australian-faunal-directory-afd)).
+
+**Settings.** Differences from Example 1:
 
 ```yaml
 marker:
   name: COI
   entrez_query: COI[Gene] OR COX1[Gene] OR cytochrome oxidase subunit 1[Title]
 taxon:
-  label: Animalia
+  label: Arthropoda
   ala_kingdom: Animalia
   ncbi_organism_filter: ""
-  ncbi_root_taxid: 6656               # arthropods; 33208 for all animals
+  ncbi_root_taxid: 6656               # arthropods
   seed_plant_taxid: ~
-taxonomy:
-  authority: AFD                      # or none
-  authority_file: ALA_Records/AFD-20261125T151017.csv
 target:
+  accepted_ranks: [species, subspecies]
   exclude_phyla: []
-  exclude_classes: []
+  exclude_classes: [Malacostraca, Copepoda, Thecostraca, Branchiopoda, Ostracoda, Ichthyostraca,
+                    Hexanauplia, Maxillopoda, Cephalocarida, Remipedia, Mystacocarida, Tantulocarida]
   exclude_orders: []
   exclude_genera_file: ""
   exclude_species_groups: []
+taxonomy:
+  manual_decisions: Scripts/data/manual/taxonomy_decisions_coi.csv
+  authority: AFD
+  authority_file: ALA_Records/AFD-ALA-arthropoda-20261128.csv
+output:                               # all paths under Scripts/data/derived/coi/ and Scripts/output/coi/
 ```
 
-It also needs a new ALA download filtered to the group (the example download contains only plants), new `input.combined_zip` / `input.expected_members`, a check of `target.accepted_ranks`, and its own region flags. The AFD checklist has no distribution column: set `crabs.expand_genus_without_distribution: true` to expand genus-level names to all AFD species of the genus (Australia-wide), or leave it `false` to skip the expansion; NCBI phrase names work either way. Test the COI query on the NCBI Nucleotide website first. A new marker and taxon mean a fresh NCBI run and fresh ALA genus checks; the plant caches are not reused.
+- **Crustaceans** (subphylum Crustacea) are excluded by their classes: the first six occur in the download, the others are listed in case ALA uses them. The 981 records with a blank class are not removed by this filter; crustaceans among them show up in the review queue.
+- **Manual decisions** go to their own file, `Scripts/data/manual/taxonomy_decisions_coi.csv`, so the plant decisions are not mixed in. It does not exist before the first review; the first run treats every name as undecided.
+- **Region flag** `fnq_only` as in Example 1, flagged but kept.
+- **Genus expansion:** the AFD file has no distributions, so `crabs.expand_genus_without_distribution: false` skips it (with `true`, genus-level names would add all AFD species of the genus, Australia-wide). NCBI phrase names work either way.
+- The COI query has not been tested on the NCBI Nucleotide website yet. A new marker and taxon mean a fresh NCBI run and fresh ALA genus checks; the plant caches are not reused.
 
 ## Repository
 
-Tracked in Git: the code in `Scripts/`, the configuration, the manual inputs (`Scripts/data/manual/taxonomy_decisions.csv`, `fern_lycophyte_genera.txt`), the READMEs, `LICENSE`, `.Rprofile`, `.here`, `renv.lock` with `renv/activate.R` and `renv/settings.json`, the ALA download metadata (citation, DOI, headings, search settings), and the small final outputs (`crabs_species_list.txt`, `exclusions.csv`, `ncbi_unmatched.csv`, `qc_summary.csv`, `region_flagged_species.csv`, `genus_expansion_species.csv`).
+Tracked in Git: the code in `Scripts/`, the configuration, the manual inputs (`Scripts/data/manual/taxonomy_decisions.csv`, `fern_lycophyte_genera.txt`), the READMEs, `LICENSE`, `.Rprofile`, `.here`, `renv.lock` with `renv/activate.R` and `renv/settings.json`, the ALA download metadata (citation, DOI, headings, search settings), the `*_download_info.txt` tracking files of the authority CSVs, and the small final outputs (`crabs_species_list.txt`, `exclusions.csv`, `ncbi_unmatched.csv`, `qc_summary.csv`, `region_flagged_species.csv`, `genus_expansion_species.csv`) of both examples (`Scripts/output/` and `Scripts/output/coi/`).
 
-Not tracked (see [`.gitignore`](.gitignore)): the ALA data (cited by DOI), the APC/AFD authority CSVs, the SQLite databases, the `_targets/` store, `Scripts/data/derived/` (intermediates and caches), the review backups, `Scripts/config/secrets.env` with the NCBI API key, and Excel lock files.
+Not tracked (see [`.gitignore`](.gitignore)): the ALA data (cited by DOI), the APC/AFD authority CSVs and the raw ALA species-index download, the SQLite databases, the `_targets/` store, `Scripts/data/derived/` (intermediates and caches), the review backups, `Scripts/config/secrets.env` with the NCBI API key, and Excel lock files.
 
 ```text
 ALA/
 ├── README.md                          (this file)
 ├── renv.lock
-├── ALA_Records/                       (ALA downloads and the authority CSV; see its README)
+├── ALA_Records/                       (ALA downloads and the authority CSVs; see its README)
 ├── Scripts/
 │   ├── _targets.R                     (pipeline definition)
-│   ├── config/ala_crabs.yml           (all settings)
+│   ├── config/ala_crabs.yml           (the active config: the only one the pipeline reads)
+│   ├── config/ala_crabs_its_plants.yml      (Example 1)
+│   ├── config/ala_crabs_coi_arthropods.yml  (Example 2)
 │   ├── config/secrets.env.example     (template for config/secrets.env)
+│   ├── prepare_afd_from_ala.R         (builds the arthropod AFD authority file)
 │   ├── workflow_helpers/              (helpers_*.R functions)
 │   ├── analysis/05_filtering_summary.Rmd
-│   ├── data/manual/                   (taxonomy_decisions.csv, fern_lycophyte_genera.txt)
-│   ├── data/derived/                  (intermediates and caches, not tracked)
-│   └── output/                        (crabs/, audit/, reports/)
+│   ├── data/manual/                   (taxonomy_decisions*.csv, fern_lycophyte_genera.txt)
+│   ├── data/derived/                  (intermediates and caches, not tracked; coi/ for Example 2)
+│   └── output/                        (crabs/, audit/, reports/; coi/ for Example 2)
 └── _targets/                          (targets store, not tracked)
 ```
 
@@ -568,6 +651,12 @@ This repository is licensed under CC BY 4.0 (see [`LICENSE`](LICENSE)). When usi
 
 ## Version history
 
+- **Unreleased**: Example 2 (COI, NSW and QLD arthropods without crustaceans).
+  - Two example configs, `ala_crabs_its_plants.yml` (Example 1) and `ala_crabs_coi_arthropods.yml` (Example 2); the active config must be `ala_crabs.yml`.
+  - `Scripts/prepare_afd_from_ala.R`: arthropod AFD names and synonyms from the ALA species index (the AFD website exports at most 1,000 taxa). `Scripts/prepare_apc.R`: the APC Taxon export by script (no manual download needed).
+  - Authority versions pinned by tracking files `<file>_download_info.txt` in Git (md5 and structure); `tar_make()` stops if the authority file does not match; `--update` takes a newer version only if its structure is unchanged (`helpers_authority_files.R`).
+  - Report folder configurable (`output.report_dir`); the report reads all paths from `output:` instead of fixed paths.
+  - `.gitignore` tracks the final outputs of Example 2 under `Scripts/output/coi/`.
 - **1.0.4 (2026-11-25)**: genus expansion, Australian fauna (AFD) support, config cleanup; first published version.
   - Genus expansion for plants and fauna (`crabs.expand_genus_from_authority`, `crabs.expand_genus_without_distribution`, `taxonomy.authority_states`, `taxonomy.authority_state_qualifiers_excluded`) and NCBI phrase names (`crabs.keep_ncbi_phrase_names`) for included genus-level names; audit `genus_expansion_species.csv`.
   - `target.candidate_fields` and `crabs.include_decisions` now used by the code; unused keys removed (`taxonomy.primary_source`, `taxonomy.primary_source_version`, `target.retain_ambiguous_names`, `target.retain_infraspecific`).

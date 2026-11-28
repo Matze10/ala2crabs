@@ -1,0 +1,243 @@
+# Example 1: ITS species list for NSW + QLD seed plants (pollen).
+#
+# The pipeline only reads Scripts/config/ala_crabs.yml. The examples are kept as
+#   ala_crabs_its_plants.yml      Example 1 (ITS, NSW + QLD seed plants)
+#   ala_crabs_coi_arthropods.yml  Example 2 (COI, NSW + QLD arthropods, no crustaceans)
+# To run one, copy it to ala_crabs.yml (see "Configuration" in README.md).
+project:
+  name: ala_crabs_its
+  version: "1.0.4"
+  target_rank: "Plantae"
+
+input:
+  combined_zip: ALA_Records/plant_ala_records-2026-11-21/records-2026-11-21.zip
+  expected_members:
+    - records-2026-11-21_nsw.csv
+    - records-2026-11-21_qld.csv
+    - records-2026-11-21_part2_nsw.csv
+    - records-2026-11-21_part2_qld.csv
+    - records-2026-11-21_part3_nsw.csv
+    - records-2026-11-21_part4_nsw.csv
+    - records-2026-11-21_part5_nsw.csv
+  
+
+marker:
+  # REQUIRED: there is no default. If name or entrez_query is missing or empty,
+  # tar_make() stops at the first step (read_config) with an error.
+  # Barcode marker for the NCBI sequence count per species
+  # (helpers_entrez.R, entrez_taxonomy_marker()).
+  #
+  # How the NCBI query is filled in: for every species in
+  # Scripts/data/derived/reviewed_species.txt the pipeline searches the NCBI
+  # nucleotide database (db = nuccore) with
+  #     "<species>"[Organism] AND (<entrez_query>)
+  # e.g. for Acacia aneura with the ITS setting below:
+  #     "Acacia aneura"[Organism] AND (ITS[Title] OR internal transcribed spacer[All Fields])
+  # and stores the hit count as ncbi_marker_hits in entrez_marker_checks.csv.
+  # Separately, "<species>"[Scientific Name] is searched in NCBI Taxonomy for
+  # the taxonomy ID (independent of the marker).
+  #
+  # entrez_query is plain NCBI search syntax: test it on
+  # https://www.ncbi.nlm.nih.gov/nuccore first (field tags such as [Title],
+  # [Gene], [All Fields]; AND / OR; quotes for phrases). Do not include the
+  # [Organism] part; the pipeline adds it.
+  #
+  # To switch marker, change both lines, for example:
+  #   name: rbcL   entrez_query: rbcL[Gene] OR rbcL[Title]
+  #   name: matK   entrez_query: matK[Gene] OR matK[Title]
+  #   name: trnL   entrez_query: trnL[Gene] OR trnL[Title]
+  # Results are cached per species and marker, so a new marker means one fresh
+  # NCBI run (about 3 hours for ~26,000 species); switching back reuses the cache.
+  name: ITS
+  entrez_query: ITS[Title] OR internal transcribed spacer[All Fields]
+
+taxon:
+  # Which organisms the list is for. Defaults reproduce the current plant setup.
+  # For animals (e.g. COI) see "Taxon settings" in ALA_Records/README.md.
+  label: Plantae                      # used in log messages and the report
+  ala_kingdom: Plantae                # ALA kingdom filter for records and ALA name matching ("" = no filter)
+  ncbi_organism_filter: ""            # optional extra NCBI nucleotide filter ANDed to the marker query,
+                                      # e.g. Viridiplantae[Organism] or Insecta[Organism]; "" = none.
+                                      # A non-empty filter changes the query, so it gets its own NCBI cache files.
+  ncbi_root_taxid: 35493              # NCBI subtree for name matching (35493 land plants, 33208 animals, 6656 arthropods)
+  seed_plant_taxid: 58024             # only for the ncbi_seed_plant audit column (58024 Spermatophyta); ~ to skip
+
+target:
+  # ALA hierarchy fields are inconsistent; rank and name evidence are primary.
+  accepted_ranks:
+    - species
+    - subspecies
+    - variety
+    - form
+    - nothovariety
+  exclude_phyla:
+    - Bryophyta
+    - Marchantiophyta
+    - Anthocerotophyta
+    - Chlorophyta
+    - Rhodophyta
+    - Glaucophyta
+  exclude_classes:
+    - Bryopsida
+    - Marchantiopsida
+    - Jungermanniopsida
+    - Anthocerotopsida
+    - Lycopodiopsida
+    - Polypodiopsida
+  # ALA files every land plant under Charophyta / Equisetopsida, so the class
+  # list above never removes ferns or lycophytes. Exclude them by order, and by
+  # genus for records whose order is blank.
+  exclude_orders:
+    - Lycopodiales
+    - Isoetales
+    - Selaginellales
+    - Equisetales
+    - Psilotales
+    - Ophioglossales
+    - Marattiales
+    - Osmundales
+    - Hymenophyllales
+    - Gleicheniales
+    - Schizaeales
+    - Salviniales
+    - Cyatheales
+    - Polypodiales
+  exclude_genera_file: Scripts/data/manual/fern_lycophyte_genera.txt
+  # Genera whose ALA species group contains one of these texts are excluded
+  # (ALA name matching, see taxonomy.ala_namematching_url).
+  # The phyla, classes, orders, genus file and species groups above are the
+  # plant-specific exclusions; for another group, replace them or set them to []
+  # and exclude_genera_file to "".
+  exclude_species_groups:
+    - Ferns and allies
+  candidate_fields:
+    - raw_scientificName
+    - scientificName
+    - acceptedNameUsage
+    - originalNameUsage
+
+taxonomy:
+  manual_decisions: Scripts/data/manual/taxonomy_decisions.csv
+  secrets_file: Scripts/config/secrets.env
+  entrez_workers: 4
+  request_interval_seconds: 0.11
+  entrez_cache: Scripts/data/derived/entrez_cache
+  # Every genus is checked against ALA name matching (kingdom taxon.ala_kingdom);
+  # genera in a target.exclude_orders order or a target.exclude_species_groups
+  # group are excluded, as are those in target.exclude_genera_file. Results are
+  # cached per genus (and per kingdom, if it is not Plantae).
+  ala_namematching_url: https://api.ala.org.au/namematching/api/searchByClassification
+  ala_cache: Scripts/data/derived/ala_genus_cache
+  ala_request_interval_seconds: 0.05
+  # National name authority file, made with a script (see "Name authority file" in README.md):
+  #   Rscript Scripts/prepare_apc.R   downloads the APC Taxon export into ALA_Records/
+  #   APC  = Australian Plant Census "APC Taxon" CSV export (plants)
+  #   AFD  = Australian Faunal Directory checklist CSV (animals, see Example 2)
+  #   none = no authority, ALA names go straight to NCBI
+  # A newer download changes the results: set it here in authority_file.
+  authority: APC
+  authority_file: ALA_Records/APC-taxon-2026-11-22-4420.csv
+  # The NCBI subtree searched for names is taxon.ncbi_root_taxid (an old
+  # taxonomy.ncbi_root_taxid here is still read if taxon: has none). The dump is
+  # downloaded once into ncbi_taxdump_dir; delete that folder to fetch a newer one.
+  ncbi_taxdump_dir: Scripts/data/derived/ncbi_taxdump
+  # Genus expansion (crabs.expand_genus_from_authority): authority species count
+  # if their distribution lists one of these states (APC codes; AFD state names
+  # are mapped to them). Naturalised and doubtfully naturalised count; records
+  # with an excluded qualifier do not.
+  authority_states: [NSW, Qld, LHI]
+  authority_state_qualifiers_excluded: [presumed extinct]
+
+geography:
+  # Coordinates outside these bands are treated as missing (e.g. 0,0 placeholders).
+  valid_latitude_min: -45
+  valid_latitude_max: -9
+  valid_longitude_min: 112
+  valid_longitude_max: 160   # 160, not 154, so Lord Howe Island records (NSW, ~159 E) keep their coordinates
+  # Region flags. A species gets a region's flag when it has at least one
+  # georeferenced record and ALL its georeferenced records lie inside the box.
+  # Leave out (or ~) any bound you don't need. Bounds are inclusive except
+  # latitude_min/longitude_min, which are strict (">"), so the FNQ boundary
+  # behaves as before (a record exactly at -16.92 counts as south).
+  # clear_states: records in these stateProvince values always count as outside,
+  # even without coordinates. exclude: true drops flagged species from the CRABS list.
+  # name becomes a column name: letters, digits and underscores only.
+  # Add a second region as another "- name: ..." entry. Cultivated records count.
+  region_flags:
+    - name: fnq_only
+      description: Far North Queensland only (all records north of Cairns)
+      latitude_min: -16.92
+      clear_states: [New South Wales]
+      exclude: false
+    # More areas, each with only the bounds it needs (examples, not active):
+    #  - name: cape_york_only
+    #    latitude_min: -14
+    #    exclude: true
+    #  - name: west_of_divide_only      # longitude cut only
+    #    longitude_max: 148
+    #    exclude: false
+    #  - name: some_box_only            # full bounding box
+    #    latitude_min: -28
+    #    latitude_max: -26
+    #    longitude_min: 152
+    #    longitude_max: 153.5
+    #    exclude: true
+    #  - name: remote_islands_only       # several boxes = one flag
+    #    description: Lord Howe or Torres Strait islands only
+    #    boxes:
+    #      - {latitude_min: -31.8, latitude_max: -31.4, longitude_min: 158.9, longitude_max: 159.3}
+    #      - {latitude_min: -10.8, latitude_max: -9.0, longitude_min: 141.5, longitude_max: 144.0}
+    #    exclude: true
+
+crabs:
+  include_decisions:
+    - include
+  exclude_uncertain: true
+  exclude_hybrids: true
+  # Keep hybrids NCBI lists as species (e.g. Citrus x aurantiifolia) under the NCBI name,
+  # even with exclude_hybrids: true. Hybrid formulas and unmatched hybrids stay excluded.
+  keep_ncbi_hybrids: true
+  exclude_genus_only: true
+  exclude_infraspecific: false
+  # Write one line per species: infraspecific names and author variants collapse to the binomial.
+  collapse_to_binomial: true
+  # true: keep only species with at least one NCBI sequence for the marker above.
+  require_marker_hit: false
+  # Genus-level names that are included (e.g. "Acaena sp. Thredbo River Gorge")
+  # cannot go to CRABS as they are. true adds the authority's accepted species of
+  # that genus in taxonomy.authority_states that are not in the list yet
+  # (audit: output.genus_expansion_audit).
+  expand_genus_from_authority: true
+  # For an authority without distributions (the AFD checklist export): true adds
+  # every accepted species of the genus (Australia-wide), false skips the expansion.
+  # Ignored for APC.
+  expand_genus_without_distribution: false
+  # Keep phrase names that NCBI lists as taxa (e.g. Samadera sp. Mt Nardi) under the NCBI name.
+  keep_ncbi_phrase_names: true
+  # Region-flagged species (e.g. FNQ-only) are dropped per region with
+  # geography.region_flags[].exclude. The old key exclude_fnq_only is deprecated
+  # (still read: true excludes the region fnq_only).
+
+output:
+  database: Scripts/data/derived/ala_raw.sqlite
+  target_records: Scripts/data/derived/target_occurrences.csv
+  candidates: Scripts/data/derived/name_candidates.csv
+  normalised_names: Scripts/data/derived/name_candidates_normalised.csv
+  taxonomy_matches: Scripts/data/derived/taxonomy_matches.csv
+  review_queue: Scripts/data/derived/taxonomy_review_queue.csv
+  reviewed_species: Scripts/data/derived/reviewed_species.txt
+  entrez_checks: Scripts/data/derived/entrez_marker_checks.csv
+  ala_genus_checks: Scripts/output/audit/ala_genus_checks.csv
+  crabs_species_list: Scripts/output/crabs/crabs_species_list.txt
+  exclusions: Scripts/output/audit/exclusions.csv
+  review_queue_export: Scripts/output/audit/review_queue.csv
+  crabs_review_queue: Scripts/output/audit/crabs_review_queue.csv
+  qc: Scripts/output/audit/qc_summary.csv
+  latitude_flags: Scripts/data/derived/species_latitude_flags.csv
+  region_flagged_species: Scripts/output/audit/region_flagged_species.csv
+  input_manifest: Scripts/output/audit/input_manifest.csv
+  synonym_matches: Scripts/data/derived/synonym_matches.csv
+  ncbi_unmatched: Scripts/output/audit/ncbi_unmatched.csv
+  genus_expansion: Scripts/data/derived/genus_expansion.csv
+  genus_expansion_audit: Scripts/output/audit/genus_expansion_species.csv
+  report_dir: Scripts/output/reports

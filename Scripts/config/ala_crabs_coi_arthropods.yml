@@ -1,0 +1,181 @@
+# Example 2: COI species list for NSW + QLD arthropods excluding crustaceans.
+#
+# The pipeline only reads Scripts/config/ala_crabs.yml. The examples are kept as
+#   ala_crabs_its_plants.yml      Example 1 (ITS, NSW + QLD seed plants)
+#   ala_crabs_coi_arthropods.yml  Example 2 (COI, NSW + QLD arthropods, no crustaceans)
+# To run one, copy it to ala_crabs.yml (see "Configuration" in README.md).
+project:
+  name: ala_crabs_coi
+  version: "1.0.4"
+  target_rank: "Arthropoda"
+
+input:
+  # ALA download 2026-11-28: species group Arthropods, NSW and QLD
+  # (DOI 10.26197/ala.f8908ddd-bd16-4e91-9132-d6dfc692d837).
+  combined_zip: ALA_Records/insect_ala_records-2026-11-28/records-2026-11-28.zip
+  expected_members:
+    - records-2026-11-28_nsw.csv
+    - records-2026-11-28_qld.csv
+
+
+marker:
+  # REQUIRED: there is no default. If name or entrez_query is missing or empty,
+  # tar_make() stops at the first step (read_config) with an error.
+  # Barcode marker for the NCBI sequence count per species
+  # (helpers_entrez.R, entrez_taxonomy_marker()).
+  #
+  # How the NCBI query is filled in: for every species in
+  # Scripts/data/derived/reviewed_species.txt the pipeline searches the NCBI
+  # nucleotide database (db = nuccore) with
+  #     "<species>"[Organism] AND (<entrez_query>)
+  # e.g. for Apis mellifera with the COI setting below:
+  #     "Apis mellifera"[Organism] AND (COI[Gene] OR COX1[Gene] OR cytochrome oxidase subunit 1[Title])
+  # and stores the hit count as ncbi_marker_hits in entrez_marker_checks.csv.
+  # Separately, "<species>"[Scientific Name] is searched in NCBI Taxonomy for
+  # the taxonomy ID (independent of the marker).
+  #
+  # entrez_query is plain NCBI search syntax: test it on
+  # https://www.ncbi.nlm.nih.gov/nuccore first (field tags such as [Title],
+  # [Gene], [All Fields]; AND / OR; quotes for phrases). Do not include the
+  # [Organism] part; the pipeline adds it.
+  #
+  # Other markers, for example:
+  #   name: ITS    entrez_query: ITS[Title] OR internal transcribed spacer[All Fields]
+  #   name: rbcL   entrez_query: rbcL[Gene] OR rbcL[Title]
+  # Results are cached per species and marker, so a new marker means one fresh
+  # NCBI run; switching back reuses the cache.
+  name: COI
+  entrez_query: COI[Gene] OR COX1[Gene] OR cytochrome oxidase subunit 1[Title]
+
+taxon:
+  # Which organisms the list is for. See "taxon" in README.md.
+  label: Arthropoda                   # used in log messages and the report
+  ala_kingdom: Animalia               # ALA kingdom filter for records and ALA name matching ("" = no filter)
+  ncbi_organism_filter: ""            # optional extra NCBI nucleotide filter ANDed to the marker query,
+                                      # e.g. Arthropoda[Organism]; "" = none.
+                                      # A non-empty filter changes the query, so it gets its own NCBI cache files.
+  ncbi_root_taxid: 6656               # NCBI subtree for name matching (6656 arthropods, 33208 animals, 35493 land plants)
+  seed_plant_taxid: ~                 # plant-only audit column; ~ skips it
+
+target:
+  # ALA hierarchy fields are inconsistent; rank and name evidence are primary.
+  accepted_ranks:
+    - species
+    - subspecies
+  exclude_phyla: []
+  # Crustacea (a subphylum, so excluded by its classes). The first six occur in
+  # the 2026-11-28 download; the rest are other crustacean classes ALA may use.
+  # ~1,000 records with a blank class are not removed by this list.
+  exclude_classes:
+    - Malacostraca
+    - Copepoda
+    - Thecostraca
+    - Branchiopoda
+    - Ostracoda
+    - Ichthyostraca
+    - Hexanauplia
+    - Maxillopoda
+    - Cephalocarida
+    - Remipedia
+    - Mystacocarida
+    - Tantulocarida
+  # Keep these as [] (not deleted): a missing key falls back to the fern defaults.
+  exclude_orders: []
+  exclude_genera_file: ""
+  exclude_species_groups: []
+  candidate_fields:
+    - raw_scientificName
+    - scientificName
+    - acceptedNameUsage
+    - originalNameUsage
+
+taxonomy:
+  # Own decision file, so the plant review in taxonomy_decisions.csv is untouched.
+  # It does not exist yet; the first run treats every name as undecided.
+  manual_decisions: Scripts/data/manual/taxonomy_decisions_coi.csv
+  secrets_file: Scripts/config/secrets.env
+  entrez_workers: 4
+  request_interval_seconds: 0.11
+  entrez_cache: Scripts/data/derived/entrez_cache
+  # Every genus is checked against ALA name matching (kingdom taxon.ala_kingdom);
+  # results are cached per genus and kingdom, so plant results are not reused.
+  ala_namematching_url: https://api.ala.org.au/namematching/api/searchByClassification
+  ala_cache: Scripts/data/derived/ala_genus_cache
+  ala_request_interval_seconds: 0.05
+  # National name authority file, made with a script (see "Name authority file" in README.md).
+  #   APC  = Australian Plant Census (plants)
+  #   AFD  = Australian Faunal Directory checklist CSV (animals)
+  #   none = no authority, ALA names go straight to NCBI
+  # The AFD website exports at most 1,000 taxa, so the arthropod AFD names are
+  # built from the ALA species index (which carries the current AFD) with
+  #     Rscript Scripts/prepare_afd_from_ala.R
+  # It writes ALA_Records/AFD-ALA-arthropoda-<YYYYMMDD>.csv (non-crustacean
+  # arthropods, AFD names and synonyms); a newer run: change authority_file.
+  authority: AFD
+  authority_file: ALA_Records/AFD-ALA-arthropoda-20261128.csv
+  ncbi_taxdump_dir: Scripts/data/derived/ncbi_taxdump
+  # Only used with an authority that has distributions (APC; AFD if a
+  # DISTRIBUTION/STATES column is present).
+  authority_states: [NSW, Qld, LHI]
+  authority_state_qualifiers_excluded: [presumed extinct]
+
+geography:
+  # Coordinates outside these bands are treated as missing (e.g. 0,0 placeholders).
+  valid_latitude_min: -45
+  valid_latitude_max: -9
+  valid_longitude_min: 112
+  valid_longitude_max: 160   # 160, not 154, so Lord Howe Island records (NSW, ~159 E) keep their coordinates
+  # Region flags. A species gets a region's flag when it has at least one
+  # georeferenced record and ALL its georeferenced records lie inside the box.
+  # See "geography" in README.md for the bounds and more examples.
+  region_flags:
+    - name: fnq_only
+      description: Far North Queensland only (all records north of Cairns)
+      latitude_min: -16.92
+      clear_states: [New South Wales]
+      exclude: false
+
+crabs:
+  include_decisions:
+    - include
+  exclude_uncertain: true
+  exclude_hybrids: true
+  keep_ncbi_hybrids: true
+  exclude_genus_only: true
+  exclude_infraspecific: false
+  # Write one line per species: subspecies and author variants collapse to the binomial.
+  collapse_to_binomial: true
+  # true: keep only species with at least one NCBI sequence for the marker above.
+  require_marker_hit: false
+  # Genus-level names: add the authority's species of that genus. Skipped with
+  # authority: none (NCBI phrase names below still work).
+  expand_genus_from_authority: true
+  # AFD has no distributions: true adds every accepted AFD species of the genus
+  # (Australia-wide), false skips the expansion. Only matters with authority: AFD.
+  expand_genus_without_distribution: false
+  keep_ncbi_phrase_names: true
+
+output:
+  # Own paths (…_coi / coi/), so the tracked plant ITS outputs are not overwritten.
+  database: Scripts/data/derived/coi/ala_raw.sqlite
+  target_records: Scripts/data/derived/coi/target_occurrences.csv
+  candidates: Scripts/data/derived/coi/name_candidates.csv
+  normalised_names: Scripts/data/derived/coi/name_candidates_normalised.csv
+  taxonomy_matches: Scripts/data/derived/coi/taxonomy_matches.csv
+  review_queue: Scripts/data/derived/coi/taxonomy_review_queue.csv
+  reviewed_species: Scripts/data/derived/coi/reviewed_species.txt
+  entrez_checks: Scripts/data/derived/coi/entrez_marker_checks.csv
+  ala_genus_checks: Scripts/output/coi/audit/ala_genus_checks.csv
+  crabs_species_list: Scripts/output/coi/crabs/crabs_species_list.txt
+  exclusions: Scripts/output/coi/audit/exclusions.csv
+  review_queue_export: Scripts/output/coi/audit/review_queue.csv
+  crabs_review_queue: Scripts/output/coi/audit/crabs_review_queue.csv
+  qc: Scripts/output/coi/audit/qc_summary.csv
+  latitude_flags: Scripts/data/derived/coi/species_latitude_flags.csv
+  region_flagged_species: Scripts/output/coi/audit/region_flagged_species.csv
+  input_manifest: Scripts/output/coi/audit/input_manifest.csv
+  synonym_matches: Scripts/data/derived/coi/synonym_matches.csv
+  ncbi_unmatched: Scripts/output/coi/audit/ncbi_unmatched.csv
+  genus_expansion: Scripts/data/derived/coi/genus_expansion.csv
+  genus_expansion_audit: Scripts/output/coi/audit/genus_expansion_species.csv
+  report_dir: Scripts/output/coi/reports
